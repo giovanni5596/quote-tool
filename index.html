@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Kiosk Quote Builder</title>
+<script>
+// Load the Inter font without blocking the page: on a slow connection the tool shows right away in the system font.
+(function(){ try { var l = document.createElement("link"); l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"; document.head.appendChild(l); } catch(e){} })();
+</script>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#09090b; --card:#141416; --card2:#1c1c1f; --ink:#f5f5f7; --muted:#8e8e93; --line:#26262a;
+    --accent:#e20074; --accent-hi:#ff2a94; --accent-soft:rgba(226,0,116,.12);
+    --good:#3ddc84; --bad:#ff6b6b; --warn:#ffc857;
+    --r:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;overflow-x:hidden;max-width:100%;background:var(--bg);color:var(--ink);font:14px/1.4 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+  button,select,input{font:inherit;color:inherit}
+  button{cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+  .top{position:sticky;top:0;z-index:20;background:rgba(9,9,11,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:10px 16px 8px}
+  .wrap{max-width:900px;margin:0 auto}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+  .brand{font-weight:700;font-size:15px;letter-spacing:-.01em}
+  .brand::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--accent);margin-right:8px;vertical-align:middle;box-shadow:0 0 10px var(--accent)}
+  .badge{display:inline-block;margin-left:8px;font-size:10px;font-weight:600;color:var(--warn);background:rgba(255,200,87,.08);border:1px solid rgba(255,200,87,.25);border-radius:999px;padding:1px 7px;vertical-align:middle;letter-spacing:.02em}
+  .tabs{display:flex;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:2px}
+  .tabs button{border:0;background:transparent;padding:5px 12px;border-radius:6px;font-weight:600;font-size:13px;color:var(--muted)}
+  .tabs button.on{background:var(--accent);color:#fff}
+  .controls{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+  .controls .spacer{flex:1}
+  .field{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);font-weight:500;letter-spacing:.02em}
+  select,input[type=text],input[type=number]{min-height:36px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--card2);font-size:14px;color:var(--ink)}
+  select:focus,input[type=text]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .money{position:relative}
+  .money input{padding-left:20px;width:120px}
+  .money::before{content:"$";position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:400;font-size:13px}
+  .btn{min-height:36px;border:1px solid var(--line);background:var(--card2);border-radius:8px;padding:6px 12px;font-weight:600;font-size:13px;color:var(--ink)}
+  .btn:hover{border-color:#3a3a40}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover,.btn.primary:active{background:var(--accent-hi);border-color:var(--accent-hi)}
+  .btn.ghost{background:transparent}
+  .btn.danger{color:var(--bad);border-color:rgba(255,107,107,.3)}
+  .btn.small{min-height:32px;padding:4px 10px;font-size:12px}
+  .totals{margin-top:8px;display:flex;gap:8px;align-items:stretch}
+  .tot{flex:1;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:6px 12px;position:relative;overflow:hidden}
+  .tot::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+  .tot span{display:block;font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+  .tot b{font-size:20px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .fine{font-size:11px;color:var(--muted);margin-top:5px}
+  .confirm{margin-top:8px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.3);border-radius:var(--r);padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+  main{padding:14px 16px 96px}
+  .empty{text-align:center;color:var(--muted);padding:48px 20px;border:1px dashed var(--line);border-radius:12px;background:var(--card);font-size:13px}
+  .empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px}
+  .item{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:start}
+  .item > div{min-width:0}
+  .ico{width:40px;height:40px;border-radius:10px;background:var(--accent-soft);color:var(--accent-hi);display:flex;align-items:center;justify-content:center}
+  .ico svg{width:20px;height:20px}
+  .iname{font-weight:600;font-size:14px}
+  .isub{font-size:12px;color:var(--muted)}
+  .price{text-align:right;font-weight:700;font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .price small{display:block;font-size:11px;color:var(--muted);font-weight:500}
+  .irow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+  .irow select{width:220px;max-width:100%;min-width:0;text-overflow:ellipsis;min-height:32px;font-size:13px;padding:4px 8px}
+  .qty{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card2)}
+  .qty button{width:32px;height:32px;border:0;background:transparent;font-size:16px;font-weight:600;color:var(--ink)}
+  .qty button:active{background:var(--accent-soft)}
+  .qty span{min-width:26px;text-align:center;font-weight:600;font-size:13px}
+  .chip.warn{background:rgba(255,200,87,.1);border-color:rgba(255,200,87,.35);color:var(--warn)}
+  .picksbar{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 12px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+  .picksbar span{text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:600}
+  .picksbar b{color:var(--ink);font-size:13px}
+  .picksbar em{font-style:normal;margin-left:auto;color:#ff7ab8;font-weight:600}
+  .picksbar.over{border-color:rgba(255,200,87,.5)} .picksbar.over em{color:var(--warn)}
+  .picksbar .btn{margin-left:4px}
+  .benpanel{padding:10px 12px}
+  .bengroup{margin-bottom:8px}
+  .bengroup .lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+  .benchip{font-size:12px;border:1px solid var(--line);background:var(--card2);color:var(--ink);border-radius:999px;padding:4px 10px;font-weight:500}
+  .benchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .discrow{display:flex;gap:8px;align-items:flex-end}
+  .discrow select, .apcheck{height:36px;min-height:36px;box-sizing:border-box;width:200px}
+  .discrow select{-webkit-appearance:none;appearance:none;padding-right:30px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1a6' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+  .apcheck{align-self:flex-end;white-space:nowrap;padding:0 10px;margin:0}
+  .brandfilter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .check.small{min-height:30px;padding:2px 10px;font-size:12px;border-radius:999px}
+  .check.small input{width:14px;height:14px}
+  .rm{display:flex;justify-content:flex-end;margin-top:4px}
+  .rm .btn{border:0;min-height:26px;padding:2px 6px;font-size:12px;opacity:.8}
+  .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .chip{font-size:11px;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted);font-weight:500}
+  .chip.promo{background:var(--accent-soft);border-color:rgba(226,0,116,.35);color:#ff7ab8}
+  .bottombar{position:fixed;left:0;right:0;bottom:0;z-index:25;background:rgba(9,9,11,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:8px 16px calc(8px + env(safe-area-inset-bottom))}
+  .bottombar .wrap{display:flex;gap:8px;justify-content:center}
+  .bottombar .btn{flex:1;max-width:320px;font-size:14px;min-height:40px}
+  .dropup{position:fixed;left:0;right:0;bottom:calc(72px + env(safe-area-inset-bottom));z-index:30;padding:0 16px}
+  .dropup .wrap{max-width:520px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 -10px 40px rgba(0,0,0,.6);padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .dropup button{border:1px solid transparent;background:transparent;color:var(--ink);border-radius:10px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:600;font-size:12px}
+  .dropup button:hover,.dropup button:active{background:var(--card2);border-color:var(--line)}
+  .dropup svg{width:22px;height:22px;color:var(--accent-hi)}
+  .overlay{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;justify-content:center;align-items:center;overflow:hidden;padding:16px 12px}
+  .sheet{background:var(--card);border:1px solid var(--line);border-radius:14px;width:100%;max-width:600px;max-height:100%;display:flex;flex-direction:column;overflow:hidden}
+  .sheet-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px}
+  .sheet h2{margin:0 0 2px;font-size:16px;font-weight:700}
+  .sec{border-top:1px solid var(--line);padding:12px 0}
+  .sec:first-of-type{border-top:0}
+  .sec h3{margin:0 0 6px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .sec select{width:100%}
+  .checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+  .check{display:flex;gap:8px;align-items:center;min-height:36px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--card2);cursor:pointer}
+  .check:has(input:checked){border-color:rgba(226,0,116,.6);background:var(--accent-soft)}
+  .check input{appearance:none;-webkit-appearance:none;flex:none;width:16px;height:16px;margin:0;border-radius:50%;border:1.5px solid var(--muted);background:transparent;cursor:pointer;transition:all .12s}
+  .check input:checked{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 2.5px var(--card2)}
+  .yn{display:flex;gap:6px}
+  .yn{flex-wrap:wrap} .yn button{flex:1;min-height:36px;border:1px solid var(--line);background:var(--card2);color:var(--ink);border-radius:8px;font-weight:600;font-size:13px}
+  .yn button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .stor{display:grid;gap:5px;margin-top:6px;max-width:360px}
+  .stor button{display:flex;flex-direction:column;align-items:center;gap:0;padding:5px 4px;border:1px solid var(--line);background:var(--card2);color:var(--ink);border-radius:8px;font:inherit;cursor:pointer;line-height:1.25}
+  .stor button b{font-size:12.5px} .stor button span{font-size:11px;color:var(--muted)}
+  .stor button.on{background:var(--accent);border-color:var(--accent);color:#fff} .stor button.on span{color:#fff}
+  .note{font-size:12px;color:var(--muted);margin-top:5px}
+  .note.good{color:var(--good);font-weight:500}
+  .note.warn{color:var(--warn);font-weight:500}
+  .preview{flex:none;background:var(--card);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .preview .pv{flex:1;font-size:12px;color:var(--muted)}
+  .preview .pv b{color:var(--ink);font-size:15px}
+  .compare{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .cbox{background:var(--card2);border-radius:10px;padding:10px;text-align:center}
+  .cbox span{display:block;font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+  .cbox b{font-size:19px;font-variant-numeric:tabular-nums}
+  .cbox.good{box-shadow:inset 0 0 0 1px var(--accent)} .cbox.good b{color:#ff7ab8} .cbox.bad b{color:var(--bad)}
+  .icons{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:4px 0}
+  .icount{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:72px}
+  .icount .ico{width:48px;height:48px}
+  .icount .ico svg{width:24px;height:24px}
+  .icount b{font-size:12px;font-weight:600}
+  table.bd{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+  table.bd td{padding:6px 4px;border-top:1px solid var(--line);vertical-align:top}
+  table.bd td.a{text-align:right;white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums}
+  table.bd tr.sum td{font-weight:700;border-top:1px solid #4a4a50}
+  .neg{color:#ff7ab8}
+  h1.view{font-size:16px;margin:0 0 10px}
+  .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:2px;margin-bottom:10px}
+  .seg button{flex:1;border:0;background:transparent;color:var(--muted);font-weight:600;font-size:13px;min-height:32px;border-radius:7px}
+  .seg button.on{background:var(--accent);color:#fff}
+  .ab{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ab .card h3{margin:0 0 4px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .ab .big{font-size:22px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .ab .lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+  .abrow{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:12px}
+  .abrow .mini{display:flex;align-items:center;gap:6px}
+  .abrow .mini svg{width:14px;height:14px;color:var(--accent-hi)}
+  .abdiff{text-align:center;font-weight:600;font-size:13px}
+  .repbtn{flex:none;width:40px;border-radius:var(--r);border:1px solid var(--line);background:var(--card);color:var(--muted);display:flex;align-items:center;justify-content:center}
+  .repbtn svg{width:18px;height:18px}
+  .repbtn.on{border-color:var(--accent);color:var(--accent-hi)}
+  .rep{margin-top:8px;background:var(--card);border:1px dashed rgba(226,0,116,.6);border-radius:var(--r);padding:8px 12px;font-size:12px}
+  .rep .room{font-size:15px;font-weight:700}
+  .rep .fits{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .bizph{text-align:center;padding:48px 20px;color:var(--muted)}
+  @media (max-width:600px){
+    .discrow{width:100%} .discrow .field{flex:1;min-width:0} .discrow select{width:100%} .apcheck{flex:1;width:auto;min-width:0}
+    .overlay{padding:0;align-items:stretch}
+    .sheet{max-width:none;height:100%;max-height:none;border-radius:0;border:0}
+    .ab{grid-template-columns:1fr}
+    .item{grid-template-columns:36px minmax(0,1fr)}
+    .ico{width:36px;height:36px} .ico svg{width:18px;height:18px}
+    .price{grid-column:2;text-align:left}
+    .dropup .wrap{grid-template-columns:repeat(4,1fr)}
+    .compare{grid-template-columns:1fr}
+    .tot b{font-size:18px}
+  }
+  /* iPhone zooms in on fields under 16px, which then lets the page slide sideways */
+  @media (pointer:coarse){ select,input[type=text],input[type=number],.irow select,.discrow select{font-size:16px} }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="row">
+      <div class="brand">Kiosk Quote Builder<span class="badge">Partly placeholder</span></div>
+      <div class="tabs">
+        <button data-act="tab" data-tab="consumer" id="tabConsumer">Consumer</button>
+        <button data-act="tab" data-tab="business" id="tabBusiness">Business</button>
+      </div>
+    </div>
+    <div class="controls" id="controls">
+      <label class="field">Quote
+        <select id="quoteSel">
+          <option value="A">Quote A</option>
+          <option value="B">Quote B</option>
+        </select>
+      </label>
+      <button class="btn danger" data-act="startover">Start Over</button>
+      <label class="field">Current monthly bill
+        <span class="money"><input type="text" inputmode="decimal" id="curBill" placeholder="0.00"></span>
+      </label>
+      <div class="spacer"></div>
+      <div class="discrow">
+        <label class="field">Discount / segment
+          <select id="discSel"></select>
+        </label>
+        <label class="check apcheck"><input type="checkbox" id="apChk">AutoPay discount</label>
+      </div>
+    </div>
+    <div id="confirmBox"></div>
+    <div class="totals" id="totals">
+      <div class="tot"><span>Monthly</span><b id="totMo">$0.00</b></div>
+      <div class="tot"><span>Due today</span><b id="totDue">$0.00</b></div>
+      <button class="repbtn" data-act="rep" id="repBtn" aria-label="Rep view" title="Rep view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
+    <div id="repBox"></div>
+    <div class="fine">Taxes and fees not included. Real: T-Mix, tablet, watch and internet plans, device prices, promos, protection. <span id="promoDate"></span></div>
+  </div>
+</header>
+
+<main><div class="wrap" id="main"></div></main>
+
+<div id="dropup"></div>
+<div class="bottombar" id="bottombar"><div class="wrap" id="bottomInner"></div></div>
+<div id="modal"></div>
+
+<script>
+// Safety net: if anything breaks while loading, show the error and a reset button instead of a black screen.
+function showCrash(msg){
+  try {
+    if (document.getElementById("crashBox")) return;
+    const d = document.createElement("div"); d.id = "crashBox";
+    d.style.cssText = "position:fixed;inset:0;z-index:9999;background:#09090b;color:#f5f5f7;font:15px/1.5 Inter,system-ui,sans-serif;padding:24px;overflow:auto";
+    d.innerHTML = '<h2 style="margin:0 0 8px;color:#e20074">Something went wrong loading the quote tool</h2>' +
+      '<p>Send Claude a screenshot of this screen.</p><pre style="white-space:pre-wrap;font-size:12px;background:#1c1c1f;padding:10px;border-radius:8px">' + String(msg).replace(/</g, "&lt;") + '</pre>' +
+      '<p>If it keeps happening, clear the saved quotes on this device:</p><button id="crashReset" style="min-height:44px;padding:0 16px;border:0;border-radius:8px;background:#e20074;color:#fff;font:inherit;font-weight:600">Clear saved quotes and reload</button>';
+    (document.body || document.documentElement).appendChild(d);
+    document.getElementById("crashReset").onclick = () => { try { localStorage.removeItem("kioskQuoteBuilder.v1"); } catch(e){} location.reload(); };
+  } catch(e){}
+}
+window.addEventListener("error", ev => showCrash((ev.message || "Error") + (ev.lineno ? " (line " + ev.lineno + ")" : "")));
+</script>
+<script>
+/* =========================================================
+   PRICING DATA. Everything below is a PLACEHOLDER.
+   Update this one block when plans or promos change.
+   ========================================================= */
+const LOADED_BENEFITS = ["Unlimited talk & text","Unlimited Premium Data","250GB high-speed hotspot","Up to 4K UHD video streaming","International roaming (15GB high-speed)","Canada & Mexico (30GB high-speed)","Scam Shield Basic","Optimized Video Calls","EIP Flex eligible"];
+const MORE_BENEFITS = ["Unlimited talk & text","Unlimited 5G & 4G LTE data","60GB high-speed hotspot","Up to 4K UHD video streaming","International roaming (5GB high-speed)","Canada & Mexico (15GB high-speed)","Scam Shield Basic","EIP Flex eligible"];
+const STD_BENEFITS = ["Unlimited talk & text","Unlimited 5G & 4G LTE data","Unlimited hotspot at 3G speeds","International texting, $0.50/min calling","Unlimited 2G data in Canada & Mexico","Scam Shield Basic","EIP Flex eligible"];
+const DATA = {
+  promosUpdated: "Nov 17, 2026 overview",
+  installmentMonths: [36, 24],
+
+  // Account-level discounts. type "pct" = percent off plan price, "flat" = $ off per line.
+  discounts: [
+    { id:"none",     name:"No discount", type:"pct", value:0, appliesTo:[] },
+    // Employee, Insider and Work Perks apply to voice lines only (confirmed by Gio).
+    { id:"employee", name:"Employee, 75% off", type:"pct", value:75, appliesTo:["phone"] },
+    { id:"insider",  name:"Insider, 20% off",  type:"pct", value:20, appliesTo:["phone"] },
+    { id:"workperks", name:"Work Perks, 15% off", type:"pct", value:15, appliesTo:["phone"] },
+    // Segments switch every phone line to that plan's segment version (own pricing, needs verification).
+    { id:"seg_mil", name:"Military", type:"segment", seg:"mil", value:0, appliesTo:[] },
+    { id:"seg_fr",  name:"First Responder", type:"segment", seg:"fr", value:0, appliesTo:[] },
+    { id:"seg_55",  name:"55+", type:"segment", seg:"55", value:0, appliesTo:[] },
+    { id:"seg_stu", name:"Student", type:"segment", seg:"stu", value:0, appliesTo:[] }
+  ],
+
+  // Phone plans use tiers: [1 line total, 2 lines total, each additional line 3+]. Account total is split evenly per line.
+  // All T-Mix prices are REAL (from Magenta Pulse plan pages, Nov 11, 2026).
+  // picks: Picks available on the account by number of voice lines (index 0 = 1 line).
+  // employee: false = not eligible for the employee discount (segment plans).
+  plans: {
+    phone: [
+      { id:"loaded", name:"T-Mix Loaded", tiers:{ autopay:[95,160,40], noAutopay:[105,180,50] }, maxLines:12,
+        picks:[3,6,9,11,13,15,16,17,18,19,20,21], employee:true, benefits:LOADED_BENEFITS },
+      { id:"loaded_mil", name:"T-Mix Loaded (Military)", tiers:{ autopay:[80,130,35], noAutopay:[90,150,45] }, maxLines:12,
+        picks:[3,6,9,11,13,15,16,17,18,19,20,21], employee:false, note:"Military verification required", benefits:LOADED_BENEFITS },
+      { id:"loaded_fr", name:"T-Mix Loaded (First Responder)", tiers:{ autopay:[80,130,35], noAutopay:[90,150,45] }, maxLines:12,
+        picks:[3,6,9,11,13,15,16,17,18,19,20,21], employee:false, note:"First Responder verification required", benefits:["T-Priority included"].concat(LOADED_BENEFITS) },
+      { id:"loaded_55", name:"T-Mix Loaded (55+)", tiers:{ autopay:[85,150,null], noAutopay:[95,170,null] }, maxLines:2,
+        picks:[3,6,9,11,13,15,16,17,18,19,20,21], employee:false, note:"55+ verification required", benefits:LOADED_BENEFITS },
+      { id:"loaded_stu", name:"T-Mix Loaded (Student)", tiers:{ autopay:[85,150,null], noAutopay:[95,170,null] }, maxLines:2,
+        picks:[3,6,9,11,13,15,16,17,18,19,20,21], employee:false, note:"Student verification required", benefits:LOADED_BENEFITS },
+      { id:"more", name:"T-Mix More", tiers:{ autopay:[75,130,25], noAutopay:[85,150,35] }, maxLines:12,
+        picks:[2,4,6,7,8,9,10,10,11,11,12,12], maxPicks:12, employee:true, benefits:MORE_BENEFITS },
+      { id:"more_mil", name:"T-Mix More (Military)", tiers:{ autopay:[60,105,25], noAutopay:[70,125,35] }, maxLines:12,
+        picks:[2,4,6,7,8,9,10,10,11,11,12,12], maxPicks:12, employee:false, note:"Military verification required", benefits:MORE_BENEFITS },
+      { id:"more_fr", name:"T-Mix More (First Responder)", tiers:{ autopay:[60,105,25], noAutopay:[70,125,35] }, maxLines:12,
+        picks:[2,4,6,7,8,9,10,10,11,11,12,12], maxPicks:12, employee:false, note:"First Responder verification required", benefits:["T-Priority included"].concat(MORE_BENEFITS) },
+      { id:"more_55", name:"T-Mix More (55+)", tiers:{ autopay:[65,120,null], noAutopay:[75,140,null] }, maxLines:2,
+        picks:[2,4,6,7,8,9,10,10,11,11,12,12], maxPicks:12, employee:false, note:"55+ verification required", benefits:MORE_BENEFITS },
+      { id:"more_stu", name:"T-Mix More (Student)", tiers:{ autopay:[65,120,null], noAutopay:[75,140,null] }, maxLines:2,
+        picks:[2,4,6,7,8,9,10,10,11,11,12,12], maxPicks:12, employee:false, note:"Student verification required", benefits:MORE_BENEFITS },
+      { id:"standard", name:"T-Mix Standard", tiers:{ autopay:[55,85,15], noAutopay:[65,105,25] }, maxLines:6,
+        picks:[1,2,3,4,4,4], maxPicks:4, employee:true, benefits:STD_BENEFITS },
+      { id:"std_mil", name:"T-Mix Standard (Military)", tiers:{ autopay:[45,70,15], noAutopay:[55,90,25] }, maxLines:6,
+        picks:[1,2,3,4,4,4], maxPicks:4, employee:false, note:"Military verification required", benefits:STD_BENEFITS },
+      { id:"std_fr", name:"T-Mix Standard (First Responder)", tiers:{ autopay:[45,70,15], noAutopay:[55,90,25] }, maxLines:6,
+        picks:[1,2,3,4,4,4], maxPicks:4, employee:false, note:"First Responder verification required", benefits:["T-Priority included"].concat(STD_BENEFITS) },
+      { id:"std_55", name:"T-Mix Standard (55+)", tiers:{ autopay:[50,75,null], noAutopay:[60,95,null] }, maxLines:2,
+        picks:[1,2,3,4,4,4], maxPicks:4, employee:false, note:"55+ verification required", benefits:STD_BENEFITS },
+      { id:"std_stu", name:"T-Mix Standard (Student)", tiers:{ autopay:[50,75,null], noAutopay:[60,95,null] }, maxLines:2,
+        picks:[1,2,3,4,4,4], maxPicks:4, employee:false, note:"Student verification required", benefits:STD_BENEFITS }
+    ],
+    tablet: [
+      // voiceBundle here = $40 Tablet + Voice bill credit when the account has a voice line.
+      { id:"tabess", name:"Tablet Essentials 3.0", price:55, noAp:60, voiceBundle:40, voiceLabel:"Tablet + Voice bill credit (with voice line)",
+        benefits:["Unlimited messaging, no voice","High-speed data allotment, then 600kbps","Unlimited hotspot at 3G speeds","Video optimized at 480p","Unlimited 2G data in Canada and Mexico","Stateside International Unlimited Texting"] },
+      { id:"tabunl", name:"Tablet Unlimited 3.0", price:60, noAp:65, voiceBundle:40, voiceLabel:"Tablet + Voice bill credit (with voice line)",
+        benefits:["Unlimited messaging, no voice","Unlimited 5G and 4G LTE data","Video up to 720p","Canada and Mexico 5GB high-speed","Basic international roaming"] },
+      { id:"tab25", name:"25GB Tablet w/ Savings 3.0", price:30, noAp:30, withSavings:true, note:"$5 with a Loaded line and no promo on this tablet. No AutoPay discount, no $40 Tablet + Voice credit.",
+        benefits:["Unlimited messaging, no voice","25GB high-speed data, then 600kbps","Hotspot uses the high-speed allotment","Video optimized at 480p","Canada and Mexico 5GB high-speed","Basic international roaming"] },
+      { id:"tabplus", name:"Tablet Unlimited Plus 3.0", price:65, noAp:70, voiceBundle:40, voiceLabel:"Tablet + Voice bill credit (with voice line)",
+        benefits:["Unlimited messaging, no voice","Unlimited 5G and 4G LTE data","15GB high-speed hotspot, then 600kbps","Up to 1080p HD video (must activate)","Canada and Mexico 15GB high-speed","Premium international roaming"] }
+    ],
+    watch: [
+      { id:"w30", name:"Watch Plan 3.0", price:10, noAp:15, note:"Apple or Android version. Standalone version same price.", benefits:["Unlimited talk, text and high-speed data","Stateside International Unlimited Texting","No international roaming"] },
+      { id:"wplus30", name:"Watch Plan Plus 3.0", price:15, noAp:20, note:"Apple or Android version. Standalone version same price.", benefits:["Unlimited talk, text and high-speed data","Stateside International Unlimited Texting","Canada and Mexico data (15GB)","Premium international roaming"] },
+      { id:"wkids30", name:"SyncUP KIDS Watch 3.0", price:10, noAp:15, note:"SyncUP KIDS Watch only.", benefits:["Unlimited talk, text and high-speed data","Stateside International Unlimited Texting"] }
+    ],
+    internet: [
+      // REAL prices from Magenta Pulse (T-Mix combinable internet plans), Nov 17, 2026. price = with AutoPay, noAp = without.
+      // voiceBundle = $ off when the account has a qualifying voice line (Internet Voice Bundle Discount).
+      { id:"hi_amp", name:"Home Internet Amplified", price:60, noAp:70, voiceBundle:15,
+        benefits:["Unlimited data, no speed caps","5G Gateway (G5AR or G5SE)","5-Year Price Guarantee","170-498 Mbps down / 12-55 up"] },
+      { id:"hi_allin", name:"All-in Home Internet", price:70, noAp:80, voiceBundle:15,
+        benefits:["Unlimited Premium Data, no speed caps","5G Gateway Gen5","24/7 Personal TechPro by Assurant","Advanced Cyber Security","10-Year Price Guarantee","170-498 Mbps down / 12-55 up"] },
+      { id:"hi_rely", name:"Home Internet Rely", price:50, noAp:60, voiceBundle:15, note:"Included features not confirmed yet.", benefits:["Home Internet (details to confirm)", "$15 Internet Voice Bundle Discount with a voice line"] },
+      { id:"away200", name:"Home Internet AWAY 200GB (hotspot)", price:110, noAp:120,
+        benefits:["200GB of data","5G Gateway (per POS)","5-Year Price Guarantee","New activations only","77-292 Mbps down / 18-31 up"] },
+      { id:"awayunl", name:"Home Internet AWAY Unlimited (hotspot)", price:160, noAp:170,
+        benefits:["Unlimited fixed wireless data","5G Gateway (per POS)","5-Year Price Guarantee","New activations only","77-292 Mbps down / 18-31 up"] }
+    ]
+  },
+
+  devices: {
+    phone: [
+      // REAL prices from t-mobile.com phone list, re-checked Nov 12, 2026. picks = Picks to get it at $0/mo on T-Mix (online listing); picksNote = extra condition the site lists.
+      // picksCredit = credit when Picks only cover part of the price.
+      { id:"ip18pm", name:"iPhone 18 Pro Max", price:1299.99, picks:5 },
+      { id:"ip18p", name:"iPhone 18 Pro", price:1199.99, picks:3 },
+      { id:"ipduo", name:"iPhone Duo", price:1999.99, picks:7 },
+      { id:"ip17pm", name:"iPhone 17 Pro Max", price:1199.99, picks:3 },
+      { id:"ip17p", name:"iPhone 17 Pro", price:1099.99, picks:3 },
+      { id:"ip17", name:"iPhone 17", price:929.99, picks:2, picksNote:"with trade" },
+      { id:"ipair", name:"iPhone Air", price:1099.99, picks:4 },
+      { id:"ip17e", name:"iPhone 17e", price:699.99, picks:3, picksNote:"with any-condition trade" },
+      { id:"ip16p", name:"iPhone 16 Pro", price:899.99, picks:3 },
+      { id:"ip16pl", name:"iPhone 16 Plus", price:829.99, picks:4 },
+      { id:"ip16", name:"iPhone 16", price:829.99, picks:4 },
+      { id:"ip15", name:"iPhone 15", price:629.99, picks:2, picksNote:"with trade" },
+      { id:"gs26u", name:"Galaxy S26 Ultra", price:1399.99, picks:5 },
+      { id:"gs26pl", name:"Galaxy S26+", price:1199.99, picks:3 },
+      { id:"gs26", name:"Galaxy S26", price:999.99, picks:2 },
+      { id:"gs26fe", name:"Galaxy S26 FE", price:799.99, picks:4 },
+      { id:"zfold8u", name:"Galaxy Z Fold8 Ultra", price:2099.99, fold:true, picks:7 },
+      { id:"zfold8", name:"Galaxy Z Fold8", price:1899.99, fold:true, picks:6 },
+      { id:"zflip8", name:"Galaxy Z Flip8", price:1199.99, picks:3 },
+      { id:"gs25u", name:"Galaxy S25 Ultra", price:1299.99, picks:5 },
+      { id:"gs25e", name:"Galaxy S25 Edge", price:1099.99, picks:3 },
+      { id:"gs25", name:"Galaxy S25", price:799.99, picks:4 },
+      { id:"gs25fe", name:"Galaxy S25 FE", price:649.99, picks:3 },
+      { id:"ga57", name:"Galaxy A57 5G", price:609.99, picks:3 },
+      { id:"ga37", name:"Galaxy A37 5G", price:489.99, picks:1 },
+      { id:"ga17", name:"Galaxy A17 5G", price:279.99, picks:2 },
+      { id:"xcover7", name:"Galaxy XCover7 Pro 5G", price:599.99, picks:3 },
+      { id:"px11pxl", name:"Pixel 11 Pro XL", price:1299.99, picks:5 },
+      { id:"px11p", name:"Pixel 11 Pro", price:1099.99, picks:2 },
+      { id:"px11", name:"Pixel 11", price:899.99, picks:2 },
+      { id:"px11fold", name:"Pixel 11 Pro Fold", price:1899.99, fold:true, picks:1, picksCredit:899.91 },
+      { id:"px10pxl", name:"Pixel 10 Pro XL", price:1199.99, picks:5 },
+      { id:"px10p", name:"Pixel 10 Pro", price:999.99, picks:2 },
+      { id:"px10", name:"Pixel 10 (sale price)", price:699.99, picks:4 },
+      { id:"px10a", name:"Pixel 10a", price:499.99, picks:1 },
+      { id:"px9", name:"Pixel 9", price:799.99 },
+      { id:"razrfold26", name:"razr fold 2026", price:1699.99, fold:true, picks:6 },
+      { id:"razrp26", name:"razr+ 2026", price:999.99, picks:2 },
+      { id:"razr26", name:"razr 2026", price:769.99, picks:1, picksNote:"with new line" },
+      { id:"razru25", name:"razr ultra 2025 (sale price)", price:999.99, picks:4 },
+      { id:"razrp25", name:"razr+ 2025 (sale price)", price:699.99, picks:1 },
+      { id:"motogs26", name:"moto g stylus 2026", price:309.99, picks:1, picksNote:"with trade" },
+      { id:"motog26", name:"moto g 2026", price:269.99, picks:2 },
+      { id:"revvl8p", name:"REVVL 8 Pro", price:249.99, picks:2 },
+      { id:"nxtpaper70", name:"TCL NXTPAPER 70 Pro", price:249.99, picks:2 },
+      { id:"tclflip4", name:"TCL FLIP 4", price:119.99 },
+      { id:"sonimxp3", name:"Sonim XP3plus 5G", price:269.99, picks:2 },
+      { id:"sonimxp3nc", name:"Sonim XP3plus 5G (no camera)", price:269.99, picks:2 },
+      { id:"sonimxppro", name:"Sonim XP Pro", price:529.99 },
+      { id:"phBYO", name:"Bring your own phone", price:0 }
+    ],
+    tablet: [
+      // REAL prices from t-mobile.com/tablets, Nov 12, 2026
+      { id:"tbBYO", name:"Bring your own tablet", price:0 },
+      { id:"ipadpro13m5", name:"iPad Pro 13-inch (M5)", price:1699.99 },
+      { id:"ipadpro11m5", name:"iPad Pro 11-inch (M5)", price:1399.99 },
+      { id:"ipadair13m4", name:"iPad Air 13-inch (M4)", price:1099.99 },
+      { id:"ipadair11m4", name:"iPad Air 11-inch (M4)", price:899.99 },
+      { id:"ipadminia20", name:"iPad mini (A20 Pro)", price:849.99 },
+      { id:"ipadminia17", name:"iPad mini (A17 Pro)", price:749.99 },
+      { id:"ipada16", name:"iPad (A16)", price:599.99 },
+      { id:"tabs10fe", name:"Galaxy Tab S10 FE 5G", price:649.99 },
+      { id:"taba11p", name:"Galaxy Tab A11+ 5G", price:339.99 },
+      { id:"taba9p", name:"Galaxy Tab A9+ 5G", price:276.00 },
+      { id:"motopad26", name:"moto pad 2026", price:249.99 },
+      { id:"revvltab2", name:"REVVL Tab 2", price:169.99 }
+    ],
+    watch: [
+      // REAL prices from t-mobile.com/smart-watches, Nov 12, 2026
+      { id:"wBYO", name:"Bring your own watch", price:0 },
+      { id:"aw12_42", name:"Apple Watch Series 12 42mm", price:499.99 },
+      { id:"aw12_46", name:"Apple Watch Series 12 46mm", price:549.99 },
+      { id:"awu4", name:"Apple Watch Ultra 4", price:799.99 },
+      { id:"awu3", name:"Apple Watch Ultra 3", price:699.99 },
+      { id:"aw11_42", name:"Apple Watch Series 11 42mm", price:449.99 },
+      { id:"aw11_46", name:"Apple Watch Series 11 46mm", price:479.99 },
+      { id:"awse3_40", name:"Apple Watch SE 3 40mm", price:299.99 },
+      { id:"awse3_44", name:"Apple Watch SE 3 44mm", price:329.99 },
+      { id:"pw5_41", name:"Pixel Watch 5 (41mm)", price:499.99 },
+      { id:"pw5_45", name:"Pixel Watch 5 (45mm)", price:529.99 },
+      { id:"gw9_40", name:"Galaxy Watch9 40mm", price:429.99 },
+      { id:"gw9_44", name:"Galaxy Watch9 44mm", price:459.99 },
+      { id:"gwu2", name:"Galaxy Watch Ultra2", price:699.99 },
+      { id:"gwu47", name:"Galaxy Watch Ultra 47mm", price:649.99 },
+      { id:"gw8c46", name:"Galaxy Watch8 Classic 46mm", price:549.99 },
+      { id:"gw8_44", name:"Galaxy Watch8 44mm", price:429.99 },
+      { id:"gw8_40", name:"Galaxy Watch8 40mm (sale price)", price:349.99 },
+      { id:"syncupkids2", name:"SyncUP KIDS Watch 2", price:174.00 },
+      { id:"motoultraw", name:"Moto Ultra Watch (price from promo, confirm)", price:299.99 }
+    ],
+    internet: [
+      { id:"gw", name:"Internet gateway (included)", price:0 }
+    ]
+  },
+
+  // Monthly phone protection by device price. Fold devices are a flat $26.
+  protectionTiers: { fold:26, tiers:[ {min:600, price:19}, {min:500, price:16}, {min:300, price:13}, {min:0.01, price:9} ] },
+
+  protection: {
+    // Phone protection is priced by the phone (see PROTECTION_TIERS below).
+    // Financed phones: P360 priced automatically from the phone. BYOD: pick the tier for the customer's phone.
+    phone:   [ {id:"none",name:"No protection",price:0}, {id:"php",name:"P360",byPrice:true},
+               {id:"byo26",name:"P360, fold phone",price:26,byo:true}, {id:"byo19",name:"P360, phone worth $600-$1,600",price:19,byo:true},
+               {id:"byo16",name:"P360, phone worth $500-$599",price:16,byo:true}, {id:"byo13",name:"P360, phone worth $300-$499",price:13,byo:true},
+               {id:"byo9",name:"P360, phone worth under $300",price:9,byo:true} ],
+    // Tablets and watches use the same P360 price tiers as phones (per Gio, Nov 18).
+    tablet:  [ {id:"none",name:"No protection",price:0}, {id:"php",name:"P360",byPrice:true},
+               {id:"byo19",name:"P360, tablet worth $600-$1,600",price:19,byo:true}, {id:"byo16",name:"P360, tablet worth $500-$599",price:16,byo:true},
+               {id:"byo13",name:"P360, tablet worth $300-$499",price:13,byo:true}, {id:"byo9",name:"P360, tablet worth under $300",price:9,byo:true} ],
+    watch:   [ {id:"none",name:"No protection",price:0}, {id:"php",name:"P360",byPrice:true},
+               {id:"byo19",name:"P360, watch worth $600-$1,600",price:19,byo:true}, {id:"byo16",name:"P360, watch worth $500-$599",price:16,byo:true},
+               {id:"byo13",name:"P360, watch worth $300-$499",price:13,byo:true}, {id:"byo9",name:"P360, watch worth under $300",price:9,byo:true} ],
+    internet:[ {id:"none",name:"No protection",price:0} ]
+  },
+
+  addons: [],  // removed per Gio, Nov 17
+
+  // Trade-in devices. tier decides which promo matches automatically.
+  // Trade-in tiers (simplified from the weekly overview). Always confirm the exact tier in MP.
+  tradeIns: [
+    { id:"t1", name:"Tier 1: newer flagships (iPhone 15 Pro and up, 16, 17; Galaxy S24+/Ultra, S25, S26; Z Flip/Fold 5-7)", tier:1 },
+    { id:"t2", name:"Tier 2: iPhone 13 Pro, 14, 15/15 Plus; Galaxy S22-S24, Note20; Pixel 6 Pro-10; razr+ 2023-2025", tier:2 },
+    { id:"t3", name:"Tier 3: older phones (iPhone 12 and older, Galaxy A series, older Pixel/Moto)", tier:3 }
+  ],
+  tradeConditions: [
+    { id:"good", name:"Good condition" },
+    { id:"damaged", name:"Screen or liquid damage (50% on good-condition promos)" }
+  ],
+
+  // credit = total credit, paid as monthly bill credits over the installment term.
+  // The credit stays the same even if a down payment lowers the device payment below it.
+  // tradeTier: null = no trade-in needed. devices: [] = any device in that category.
+  // T-Mix extras paid with Picks (account level).
+  partnerBenefits: [
+    { id:"tsat", name:"T-Satellite Messaging + data", picks:1, group:"Connectivity" },
+    { id:"appletv", name:"Apple TV", picks:1 }, { id:"netflixads", name:"Netflix w/ ads", picks:1 },
+    { id:"ytlite", name:"YouTube Premium Lite", picks:1 }, { id:"gaiplus", name:"Google AI Plus", picks:1 },
+    { id:"huluads", name:"Hulu w/ ads", picks:1 }, { id:"paramount", name:"Paramount+ Essential w/ ads", picks:1 },
+    { id:"dashpass", name:"DoorDash DashPass", picks:1 }, { id:"delta", name:"Delta SkyMiles", picks:1 },
+    { id:"pandoraplus", name:"Pandora Plus", picks:1 }, { id:"siriusxm", name:"SiriusXM AllAccess", picks:1 },
+    { id:"applemusic", name:"Apple Music", picks:2 }, { id:"pandoraprem", name:"Pandora Premium", picks:2 },
+    { id:"ytprem", name:"YouTube Premium", picks:2 }, { id:"gaipro", name:"Google AI Pro", picks:2 },
+    { id:"xboxprem", name:"Xbox Game Pass Premium", picks:2 },
+    { id:"netflixstd", name:"Netflix Standard", picks:3 }, { id:"xboxult", name:"Xbox Game Pass Ultimate", picks:3 },
+    { id:"netflixprem", name:"Netflix Premium", picks:4 }, { id:"espn", name:"ESPN Unlimited", picks:4 }
+  ],
+
+  promos: [
+    { id:"none", name:"No promotion", credit:0, cats:["phone","tablet","watch","internet"], tradeTier:null, devices:[] },
+    // T-Mix phone promos from the Nov 10 weekly overview (ALL T-MIX PLANS section).
+    // tx = which transactions qualify: "port" (new line with port-in), "new" (new line), "upgrade".
+    // tiers = max credit for trade tier 1, 2, 3 (0 = not eligible). cond "any" = any condition, "good" = 50% for damage.
+    // start/end = promo dates (YYYY-MM-DD). Expired promos hide; upcoming ones show "(starts ...)".
+    // mp:true = eligible device list is "check MP" in the overview.
+    // --- Activation, no trade
+    { id:"x_ip18p_port", name:"iPhone 18 Pro On Us (PORT)", credit:1200, picks:3, tx:["port"], cats:["phone"], devices:["ipduo","ip18pm","ip18p","ip17pm","ip17p","ipair","ip16p"] },
+    { id:"x_ip17_port", name:"iPhone 17 On Us (PORT)", credit:930, picks:2, tx:["port"], cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16"] },
+    { id:"x_ip17e_port", name:"iPhone 17e On Us (PORT)", credit:700, picks:1, tx:["port"], cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16"] },
+    { id:"x_ip17e_50", name:"50% Off iPhone 17e", credit:350, picks:1, tx:["port","new"], cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16","ip15"] },
+    { id:"x_gs26_port", name:"Galaxy S26 On Us (PORT)", credit:1000, picks:1, tx:["port"], start:"2026-11-13", cats:["phone"], devices:["gs26u","gs26pl","gs26","gs25u","gs25e","gs25","zfold8u","zfold8","zflip8","ga37","ga57","xcover7"] },
+    { id:"x_gs26pl_new", name:"Galaxy S26+ On Us (new line)", credit:1200, picks:3, tx:["port","new"], cats:["phone"], devices:["gs26u","gs26pl","gs26","gs25u","gs25e","zfold8u","zfold8","zflip8"] },
+    { id:"x_gs26_new", name:"Galaxy S26 On Us (new line)", credit:1000, picks:2, tx:["port","new"], cats:["phone"], devices:["gs26u","gs26pl","gs26","gs25u","gs25e","gs25","zfold8u","zfold8","zflip8"] },
+    { id:"x_gs26_600", name:"$600 Off Galaxy S26 (new line)", credit:600, picks:1, tx:["port","new"], mp:true, cats:["phone"], devices:["gs26u","gs26pl","gs26","gs25u","gs25e","gs25","zfold8u","zfold8","zflip8","ga37","ga57","xcover7"] },
+    { id:"x_px11p_new", name:"Pixel 11 Pro On Us (new line)", credit:1100, picks:2, tx:["port","new"], cats:["phone"], devices:["px11pxl","px11p","px11"] },
+    { id:"x_razr_new", name:"razr+ 2026 On Us (new line)", credit:1100, picks:2, tx:["port","new"], cats:["phone"], devices:["razrfold26","razrp26","razru25"] },
+    { id:"x_razrfold_new", name:"razr fold 2026 On Us (new line)", credit:1800, picks:2, tx:["port","new"], start:"2026-11-19", cats:["phone"], devices:["razrfold26","razrp26","razru25"] },
+    { id:"x_android_900", name:"Select Androids On Us (new line)", credit:900, picks:1, tx:["port","new"], mp:true, cats:["phone"], devices:[] },
+    { id:"x_android_300", name:"Up to $300.99 Off Android (new line)", credit:300.99, picks:1, tx:["port","new"], end:"2026-11-12", mp:true, cats:["phone"], devices:[] },
+    // --- Activation only, trade required
+    { id:"t_ip16", name:"iPhone 16 On Us w/ trade (activation)", tiers:[830,630,400], cond:"good", picks:1, tx:["port","new"], end:"2026-11-18", cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16"] },
+    { id:"t_ip16_v2", name:"iPhone 16 On Us w/ trade (activation)", tiers:[830,630,400], cond:"good", picks:1, tx:["port","new"], start:"2026-11-19", cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16","ip15"] },
+    { id:"t_ip18p_act", name:"iPhone 18 Pro On Us w/ trade (activation)", tiers:[1200,930,0], cond:"any", picks:3, tx:["port","new"], start:"2026-11-13", cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16","ip15"] },
+    { id:"t_ip17_act", name:"iPhone 17 On Us w/ trade (activation)", tiers:[930,730,0], cond:"good", picks:2, tx:["port","new"], start:"2026-11-13", cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16","ip15"] },
+    // --- Activation or upgrade, trade required
+    { id:"t_ip18p", name:"iPhone 18 Pro On Us w/ trade", tiers:[1200,930,500], cond:"any", picks:3, tx:["port","new","upgrade"], end:"2026-11-12", cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16","ip15"] },
+    { id:"t_ip17", name:"iPhone 17 On Us w/ trade", tiers:[930,730,400], cond:"good", picks:2, tx:["port","new","upgrade"], end:"2026-11-12", cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16","ip15"] },
+    { id:"t_ip18p_up", name:"iPhone 18 Pro On Us w/ trade (upgrade only)", tiers:[1200,930,500], cond:"any", picks:3, tx:["upgrade"], start:"2026-11-13", cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16","ip15"] },
+    { id:"t_ip17_up", name:"iPhone 17 On Us w/ trade (upgrade only)", tiers:[930,730,400], cond:"good", picks:2, tx:["upgrade"], start:"2026-11-13", cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16","ip15"] },
+    { id:"t_ip300", name:"Up to $300 Off iPhone w/ trade", tiers:[300,300,150], cond:"good", picks:1, tx:["port","new","upgrade"], cats:["phone"], devices:["ip18pm","ip18p","ipduo","ip17pm","ip17p","ip17","ipair","ip17e","ip16p","ip16pl","ip16","ip15"] },
+    { id:"t_gs26pl", name:"Galaxy S26+ On Us w/ trade", tiers:[1200,1200,600], cond:"good", picks:3, tx:["port","new","upgrade"], cats:["phone"], devices:["gs26u","gs26pl","gs26","gs25u","gs25e","gs25","zfold8u","zfold8","zflip8"] },
+    { id:"t_gs26", name:"Galaxy S26 On Us w/ trade", tiers:[1000,1000,500], cond:"good", picks:2, tx:["port","new","upgrade"], cats:["phone"], devices:["gs26u","gs26pl","gs26","gs25u","gs25e","gs25","zfold8u","zfold8","zflip8"] },
+    { id:"t_gs300", name:"$300 Off Select Samsungs w/ trade", tiers:[300,300,150], cond:"good", picks:1, tx:["port","new","upgrade"], cats:["phone"], devices:["gs26u","gs26pl","gs26","gs25u","gs25e","gs25","zfold8u","zfold8","zflip8","ga37","ga57","xcover7"] },
+    { id:"t_px11p", name:"Pixel 11 Pro On Us w/ trade", tiers:[1100,1100,550], cond:"good", picks:2, tx:["port","new","upgrade"], cats:["phone"], devices:["px11pxl","px11p","px11","px11fold","px10pxl","px10p","px10"] },
+    { id:"t_px11", name:"Pixel 11 On Us w/ trade", tiers:[900,900,450], cond:"good", picks:1, tx:["port","new","upgrade"], cats:["phone"], devices:["px11pxl","px11p","px11","px11fold","px10pxl","px10p","px10"] },
+    { id:"t_razr", name:"razr+ 2026 On Us w/ trade", tiers:[1100,1100,550], cond:"good", picks:2, tx:["port","new","upgrade"], cats:["phone"], devices:["razrfold26","razrp26","razr26","razru25","razrp25"] },
+    { id:"t_razrfold", name:"razr fold 2026 On Us w/ trade", tiers:[1800,1800,900], cond:"good", picks:2, tx:["port","new","upgrade"], start:"2026-11-19", cats:["phone"], devices:["razrfold26"] },
+    { id:"t_moto500", name:"Up to $500 Off Select Moto w/ trade", tiers:[500,500,250], cond:"good", picks:1, tx:["port","new","upgrade"], cats:["phone"], devices:["razrfold26","razrp26","razr26","razru25","razrp25"] },
+    { id:"t_motog", name:"moto g 2026 On Us w/ trade (any phone)", tiers:[270,270,270], cond:"any", picks:0, tx:["port","new","upgrade"], cats:["phone"], devices:["motog26"] },
+    { id:"t_5g", name:"Assorted 5G On Us w/ trade (any phone)", tiers:[200,200,200], cond:"any", picks:0, tx:["port","new","upgrade"], cats:["phone"], devices:["revvl8p","tclflip4"] },
+    // --- Picks only (activation or upgrade, no trade)
+    { id:"p_7", name:"Select Devices 7 Picks On Us (no trade)", credit:2100, picks:7, tx:["port","new","upgrade"], cats:["phone"], devices:["ipduo","zfold8u"] },
+    { id:"p_6", name:"Select Devices 6 Picks On Us (no trade)", credit:1900, picks:6, tx:["port","new","upgrade"], cats:["phone"], devices:["px11fold","razrfold26","zfold8"] },
+    { id:"p_5", name:"Select Devices 5 Picks On Us (no trade)", credit:1400, picks:5, tx:["port","new","upgrade"], cats:["phone"], devices:[] },
+    { id:"p_4", name:"Select Devices 4 Picks On Us (no trade)", credit:1100, picks:4, tx:["port","new","upgrade"], cats:["phone"], devices:[] },
+    { id:"p_3", name:"Select Devices 3 Picks On Us (no trade)", credit:700, picks:3, tx:["port","new","upgrade"], cats:["phone"], devices:[] },
+    // Tablet and watch promos from the Nov 10 overview ("Beyond the smartphone"); confirm they apply on T-Mix in MP.
+    { id:"tb_a11", name:"Galaxy Tab A11+ On Us (new line, Tablet Unlimited)", credit:339.99, plan:"tabunl", cats:["tablet"], devices:["taba11p"] },
+    { id:"tb_ipad199", name:"iPad (A16) for $199 (new line, Tablet Unlimited Plus)", credit:400.99, plan:"tabplus", end:"2026-11-18", cats:["tablet"], devices:["ipada16"] },
+    { id:"tb_revvl", name:"REVVL Tab 2 On Us (new line, $15+ plan)", credit:169.99, cats:["tablet"], devices:["revvltab2"] },
+    { id:"w_bogo", name:"Apple Watch BOGO, $250 off second ($10+ plan)", credit:250, cats:["watch"], devices:["aw12_42","aw12_46","awu4","awu3","aw11_42","aw11_46","awse3_40","awse3_44"] },
+    { id:"w_aw300", name:"Up to $300 off select Apple Watches (new line, Watch Plan Plus)", credit:300, plan:"wplus30", cats:["watch"], devices:["awse3_40","awse3_44","aw11_42","aw11_46"] },
+    { id:"w_aw12_400", name:"$400 off Apple Watch S12 (new line, Watch Plan Plus)", credit:400.99, plan:"wplus30", start:"2026-11-19", cats:["watch"], devices:["aw12_42","aw12_46"] },
+    { id:"w_motoultra", name:"Moto Ultra Watch On Us (new line, $10+ plan)", credit:299.99, start:"2026-11-19", cats:["watch"], devices:["motoultraw"] },
+    { id:"w_pw500", name:"Up to $500 off Pixel Watch 5", credit:500, cats:["watch"], devices:["pw5_41","pw5_45"] },
+    { id:"w_gw430", name:"Up to $430 off Galaxy Watch (new watch line)", credit:430, cats:["watch"], devices:["gw9_40","gw9_44","gwu2","gwu47","gw8c46","gw8_44","gw8_40"] }
+  ]
+};
+// Picks-only promos (no trade): a phone qualifies for "Select Devices N Picks On Us" when t-mobile.com lists it
+// at $0/mo with N Picks and its price fits under that promo's max. 7 and 6 also keep the overview's named devices.
+["p_7","p_6","p_5","p_4","p_3"].forEach(id => {
+  const p = DATA.promos.find(x => x.id === id); if (!p) return;
+  DATA.devices.phone.forEach(d => { if (d.picks === p.picks && !d.picksNote && d.price <= p.credit && !p.devices.includes(d.id)) p.devices.push(d.id); });
+});
+// Android-only promos: every phone that is not an iPhone (eligibility still "check MP").
+(function(){ const androids = DATA.devices.phone.filter(d => !/^ip/.test(d.id) && d.price > 0).map(d => d.id);
+  ["x_android_900","x_android_300"].forEach(id => { const p = DATA.promos.find(x => x.id === id); if (p) p.devices = androids; }); })();
+/* ===================== END PRICING DATA ===================== */
+
+const CATS = {
+  phone:{label:"Phone",plural:"Phones"},
+  tablet:{label:"Tablet",plural:"Tablets"},
+  watch:{label:"Watch",plural:"Watches"},
+  internet:{label:"Internet",plural:"Internet"}
+};
+const ICONS = {
+  phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="2" width="10" height="20" rx="2.2"/><line x1="11" y1="18.5" x2="13" y2="18.5"/></svg>',
+  tablet:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2.2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>',
+  watch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="6" width="11" height="12" rx="3"/><path d="M9 6l1-4h4l1 4M9 18l1 4h4l1-4"/></svg>',
+  internet:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 9a15 15 0 0 1 20 0"/><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/></svg>'
+};
+
+/* ---------- state ---------- */
+const STORE_KEY = "kioskQuoteBuilder.v1";
+function newQuote(){ return { items:[], discountId:"none" }; }
+let state = loadState() || { active:"A", tab:"consumer", view:"build", quotes:{A:newQuote(), B:newQuote()} };
+// Current bill is one value for the whole customer, not per quote.
+if (state.currentBill === undefined){
+  state.currentBill = (state.quotes.A && state.quotes.A.currentBill) || (state.quotes.B && state.quotes.B.currentBill) || "";
+}
+delete state.quotes.A.currentBill; delete state.quotes.B.currentBill;
+let ui = { bens:false, dropup:false, confirm:false, open:{}, rep:false };
+if (!state.reviewMode) state.reviewMode = "single";
+if (state.autopay === undefined) state.autopay = true;
+["A","B"].forEach(k => (state.quotes[k].items || []).forEach(i => { if (i.cat === "phone") i.planId = baseOf(i.planId); }));
+let draft = null, draftIndex = -1;
+
+function loadState(){
+  try { const s = JSON.parse(localStorage.getItem(STORE_KEY)); if(s && s.quotes && s.quotes.A && s.quotes.B){ [s.quotes.A, s.quotes.B].forEach(q => (q.items || []).forEach(i => i.addons = [])); return s; } } catch(e){}
+  return null;
+}
+function saveState(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){} }
+
+const Q = () => state.quotes[state.active];
+const find = (list, id) => list.find(x => x.id === id) || list[0];
+const r2 = n => Math.round(n * 100) / 100;
+const up = n => Math.ceil(Math.round(n * 1e6) / 1e4) / 100; // round up to the cent, like the bill does
+const fmt = n => (n < 0 ? "-$" : "$") + Math.abs(n).toFixed(2);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const nid = () => "i" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const num = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g,"")); return isFinite(n) ? n : 0; };
+
+/* ---------- storage options (t-mobile.com pay-in-full prices, Nov 19, 2026) ---------- */
+// First option = the base price in the device list. Devices not listed here have no storage boxes yet.
+const STORAGE = {
+  ipduo:  [["256GB",1999.99],["512GB",2199.99],["1TB",2599.99],["2TB",3199.99]],
+  ip18pm: [["256GB",1299.99],["512GB",1499.99],["1TB",1899.99],["2TB",2499.99]],
+  ip18p:  [["256GB",1199.99],["512GB",1399.99],["1TB",1799.99],["2TB",2399.99]],
+  ip17pm: [["256GB",1199.99],["512GB",1399.99],["1TB",1599.99],["2TB",1999.99]],
+  ip17:   [["256GB",929.99],["512GB",1129.99]],
+  ipair:  [["256GB",1099.99],["512GB",1299.99],["1TB",1699.99]],
+  ip17e:  [["256GB",699.99],["512GB",899.99]],
+  ip16p:  [["128GB",899.99]],
+  ip16pl: [["128GB",829.99]],
+  ip16:   [["128GB",829.99]],
+  ip15:   [["128GB",629.99]],
+  zfold8u:[["256GB",2099.99],["512GB",2299.99]],
+  zfold8: [["256GB",1899.99],["512GB",2099.99]],
+  zflip8: [["256GB",1199.99],["512GB",1399.99]]
+};
+function storageOf(dev){ return STORAGE[dev.id] || []; }
+// The device as priced for this item, with the chosen storage applied.
+function itemDev(it){
+  const dev = find(DATA.devices[it.cat], it.deviceId), opts = storageOf(dev);
+  if (!opts.length) return dev;
+  const o = opts.find(x => x[0] === it.storage) || opts[0];
+  return Object.assign({}, dev, { price:o[1], basePrice:dev.price, storage:o[0], name:dev.name + " " + o[0] });
+}
+
+function defaultItem(cat){
+  const plan = DATA.plans[cat][0];
+  return { id:nid(), cat, qty:1, planId:plan.id, deviceId:(DATA.devices[cat].find(d => /^Bring your own/.test(d.name)) || DATA.devices[cat][0]).id,
+    months:DATA.installmentMonths[0], hasDown:false, down:0, protId:"none",
+    tx:"upgrade", tradeIn:false, tradeDevId:"", tradeCond:"good", promoId:"none", benefits:[...(plan.benefits||[])], addons:[], extraCredit:0 };
+}
+
+/* ---------- math ---------- */
+function hasLoaded(qt){ return qt.items.some(i => i.cat === "phone" && baseOf(i.planId) === "loaded"); }
+function phoneLines(qt){ return qt.items.filter(i => i.cat === "phone").reduce((s,i) => s + i.qty, 0); }
+
+const BASE_PLANS = ["loaded","more","standard"];
+const SEG_PLANS = { loaded:{mil:"loaded_mil",fr:"loaded_fr","55":"loaded_55",stu:"loaded_stu"},
+  more:{mil:"more_mil",fr:"more_fr","55":"more_55",stu:"more_stu"}, standard:{mil:"std_mil",fr:"std_fr","55":"std_55",stu:"std_stu"} };
+function baseOf(id){ return /^loaded/.test(id) ? "loaded" : /^more/.test(id) ? "more" : /^(std|standard)/.test(id) ? "standard" : id; }
+// Effective plan id: base plan from the item + segment from the top dropdown.
+function pid(it, qt){
+  if (it.cat !== "phone") return it.planId;
+  const base = baseOf(it.planId), d = find(DATA.discounts, (qt || Q()).discountId);
+  return (d.seg && SEG_PLANS[base]) ? SEG_PLANS[base][d.seg] : base;
+}
+function planOf(it, qt){ return find(DATA.plans[it.cat], pid(it, qt)); }
+function linesOnPlan(qt, planId){ return qt.items.filter(i => i.cat === "phone" && pid(i, qt) === planId).reduce((s,i) => s + i.qty, 0); }
+function planTotal(plan, n){
+  const t = state.autopay === false ? plan.tiers.noAutopay : plan.tiers.autopay;
+  if (n <= 1) return t[0];
+  return t[1] + (n - 2) * (t[2] == null ? t[1] / 2 : t[2]);
+}
+function picksInfo(qt){
+  const phones = qt.items.filter(i => i.cat === "phone");
+  if (!phones.length) return null;
+  const plan = planOf(phones[0], qt);
+  const n = phoneLines(qt);
+  const avail = plan.picks ? plan.picks[Math.min(n, plan.picks.length) - 1] : null;
+  let used = 0;
+  qt.items.forEach(i => { used += promoPicks(i) * i.qty; });
+  (qt.benefits || []).forEach(id => { const b = DATA.partnerBenefits.find(x => x.id === id); if (b) used += b.picks; });
+  return { avail, max: plan.maxPicks, used, planName: plan.name };
+}
+function planPrice(it, qt){
+  const plan0 = planOf(it, qt);
+  if (plan0.tiers){
+    // Line-count pricing uses ALL voice lines on the account, even when lines are on different T-Mix plans.
+    const n = Math.max(1, phoneLines(qt));
+    return r2(planTotal(plan0, n) / n);
+  }
+  const plan = find(DATA.plans[it.cat], it.planId);
+  if (plan.perLine){
+    const n = Math.max(1, phoneLines(qt));
+    return plan.perLine[Math.min(n, plan.perLine.length) - 1];
+  }
+  if (plan.noAp != null && state.autopay === false) return plan.noAp;
+  return plan.price || 0;
+}
+
+// Set end to "YYYY-MM-DD" once known; the bonus then drops off by itself after that day.
+const HOLIDAY_BUNDLE = { amt:5, end:null };
+const TODAY = new Date().toISOString().slice(0,10);
+const TX = [ {id:"upgrade",name:"Upgrade"}, {id:"new",name:"New line"}, {id:"port",name:"New line + port-in"} ];
+function promoExpired(p){ return p.end && TODAY > p.end; }
+function promoUpcoming(p){ return p.start && TODAY < p.start; }
+function fmtDate(d){ const [y,m,dd] = d.split("-"); return (+m) + "/" + (+dd); }
+const BRANDS = [ {id:"iphone",name:"iPhone"}, {id:"samsung",name:"Samsung"}, {id:"pixel",name:"Google Pixel"}, {id:"other",name:"Other"} ];
+function brandOf(dev){
+  if (/^ip/.test(dev.id)) return "iphone";
+  if (/^(gs|ga|zfold|zflip|xcover)/.test(dev.id)) return "samsung";
+  if (/^px/.test(dev.id)) return "pixel";
+  return "other";
+}
+function protForDevice(dev){
+  if (!dev || !dev.price) return 0;
+  const t = DATA.protectionTiers;
+  if (dev.fold) return t.fold;
+  const tier = t.tiers.find(x => dev.price >= x.min);
+  return tier ? tier.price : 0;
+}
+function protCost(it){
+  const p = find(DATA.protection[it.cat], it.protId);
+  if (p.id === "none") return 0;
+  return p.byPrice ? protForDevice(itemDev(it)) : (p.price || 0);
+}
+function promoEligible(p, it){
+  if (!p.cats.includes(it.cat)) return false;
+  if (p.id === "none") return true;
+  if (promoExpired(p)) return false;
+  if (p.tx && it.cat === "phone" && !p.tx.includes(it.tx || "upgrade")) return false;
+  return !p.devices.length || p.devices.includes(it.deviceId);
+}
+function promoCredit(p, it){
+  const dev = itemDev(it);
+  if (p.id === "none") return 0;
+  if (p.dynamic) return dev.picks == null ? 0 : (dev.picksCredit || dev.basePrice || dev.price);
+  if (p.tiers){
+    if (!it.tradeIn || !it.tradeDevId) return 0;
+    const t = find(DATA.tradeIns, it.tradeDevId).tier;
+    let amt = p.tiers[t - 1] || 0;
+    if (it.tradeCond === "damaged" && p.cond !== "any") amt = amt / 2;
+    return dev.price ? Math.min(amt, dev.price) : amt;
+  }
+  // "Up to" credits never go past the device price.
+  return dev.price ? Math.min(p.credit || 0, dev.price) : (p.credit || 0);
+}
+// Some promos need a specific plan (e.g. Watch Plan Plus). Picking the promo switches the plan.
+function promoPlan(d){ const rp = find(DATA.promos, d.promoId).plan; if (rp && d.planId !== rp){ d.planId = rp; d.benefits = [...(planOf(d, Q()).benefits || [])]; } }
+function promoPicks(it){
+  const p = find(DATA.promos, it.promoId);
+  if (p.dynamic){ const dev = find(DATA.devices[it.cat], it.deviceId); return dev.picks || 0; }
+  return p.picks || 0;
+}
+function autoPromo(it){
+  if (!it.tradeIn || !it.tradeDevId) return it.promoId;
+  let best = null, bestAmt = 0;
+  DATA.promos.forEach(p => {
+    if (!p.tiers || !promoEligible(p, it) || promoUpcoming(p)) return;
+    const amt = Math.min(promoCredit(p, it), itemDev(it).price);
+    if (amt > bestAmt || (amt === bestAmt && best && (p.picks || 0) < (best.picks || 0))){ best = p; bestAmt = amt; }
+  });
+  return best ? best.id : "none";
+}
+
+function calcItem(it, qt){
+  const L = [];
+  const plan = planOf(it, qt);
+  const pp = planPrice(it, qt);
+  const lineNote = plan.tiers ? " (" + Math.max(1, phoneLines(qt)) + "-line price, " + (state.autopay === false ? "no AutoPay" : "AutoPay") + ")" : "";
+  L.push({ label:"Plan: " + plan.name + lineNote, amt:pp });
+
+  const disc = find(DATA.discounts, qt.discountId);
+  if (disc.id === "employee" && plan.employee === false){
+    L.push({ label:"Employee discount: not eligible on " + plan.name, amt:0 });
+  } else if (disc.id !== "none" && disc.appliesTo.includes(it.cat)){
+    const d = disc.type === "pct" ? r2(pp * disc.value / 100) : Math.min(disc.value, pp);
+    if (d > 0) L.push({ label:"Discount: " + disc.name, amt:-d });
+  }
+
+  const dev = itemDev(it);
+  const price = dev.price || 0;
+  const down = it.hasDown ? Math.min(Math.max(num(it.down), 0), price) : 0;
+  let devMo = 0;
+  if (price > 0){
+    devMo = up((price - down) / it.months);
+    L.push({ label:"Device: " + dev.name + " (" + fmt(price) + (down ? " minus " + fmt(down) + " down" : "") + ", " + it.months + " months)", amt:devMo });
+  }
+
+  const promo = find(DATA.promos, it.promoId);
+  if (promo.id !== "none" && price > 0){
+    const mo = up(Math.min(promoCredit(promo, it), price) / it.months);
+    const pk = promoPicks(it);
+    if (mo > 0) L.push({ label:"Promo credit: " + promo.name + (pk ? " (" + pk + " Pick" + (pk > 1 ? "s" : "") + ")" : ""), amt:-mo });
+  }
+
+  const protRaw = find(DATA.protection[it.cat], it.protId);
+  const prot = { name: protRaw.name, price: protCost(it) };
+  if (prot.price) L.push({ label:"Protection: " + prot.name + (protRaw.byPrice ? " (" + (dev.fold ? "fold device" : "priced by device") + ")" : ""), amt:prot.price });
+
+  it.addons.forEach(a => { const ad = DATA.addons.find(x => x.id === a); if (ad) L.push({ label:"Add-on: " + ad.name, amt:ad.price }); });
+
+  const vb = (plan.voiceBundle && phoneLines(qt) > 0) ? plan.voiceBundle : 0;
+  if (vb) L.push({ label:plan.voiceLabel || "Internet Voice Bundle Discount (with voice line)", amt:-vb });
+  // Holiday offer: extra $ off on top of the internet voice bundle discount (Amplified, All-in, Rely).
+  if (vb && it.cat === "internet" && HOLIDAY_BUNDLE.amt && (!HOLIDAY_BUNDLE.end || TODAY <= HOLIDAY_BUNDLE.end))
+    L.push({ label:"Holiday bundle bonus (extra $" + HOLIDAY_BUNDLE.amt + " off)", amt:-HOLIDAY_BUNDLE.amt });
+  // "With Savings": watch plans and the 25GB tablet plan drop to $5 total when the account has a Loaded line and this line has no promo.
+  if ((it.cat === "watch" || plan.withSavings) && hasLoaded(qt)){
+    if (it.promoId && it.promoId !== "none") L.push({ label:"Loaded savings: not available with a promo on this line", amt:0 });
+    else { const sv = r2(Math.max(0, pp - vb - 5)); if (sv > 0) L.push({ label:"Loaded savings, plan to $5 (with Loaded, no promo)", amt:-sv }); }
+  }
+  const ec = num(it.extraCredit);
+  if (ec > 0) L.push({ label:"Extra credit", amt:-ec });
+
+  const unit = r2(L.reduce((s,l) => s + l.amt, 0));
+  const gifts = costcoCard(it), giftUnit = gifts.reduce((a, g) => a + g[1], 0), reimbUnit = switcherAmt(it);
+  return { lines:L, unit, monthly:r2(unit * it.qty), unitDue:down, due:r2(down * it.qty), devName:dev.name, promo, prot,
+    gifts, gift:r2(giftUnit * it.qty), reimbUnit, reimb:r2(reimbUnit * it.qty) };
+}
+
+/* ---------- one-time money: Costco Digital Shop Card + switcher reimbursement ---------- */
+// Costco Member Benefit (MP "Costco Membership Promotions", Nov 2026). Paid on a Costco Digital Shop Card
+// after 90 days of service. 1 per line per year, they don't stack. Plus Up: extra $50 with the $150 offer (Nov 9 - TBA).
+const COSTCO = { newWithDevice:150, plusUp:50, upgrade:100, newByod:75, bts:25, internet:25 };
+// Turned off per Gio, Nov 19, 2026. Set to true to bring the Costco cards back everywhere.
+const COSTCO_ON = false;
+function costcoCard(it){
+  if (!COSTCO_ON) return [];
+  const dev = itemDev(it), financed = (dev.price || 0) > 0;
+  if (it.cat === "phone"){
+    const isNew = (it.tx || "upgrade") !== "upgrade";
+    if (isNew) return financed ? [["Costco card: new line + device on EIP", COSTCO.newWithDevice], ["Costco card: Member Benefit Plus Up", COSTCO.plusUp]] : [["Costco card: new line, bring your own phone", COSTCO.newByod]];
+    return financed ? [["Costco card: device upgrade on EIP", COSTCO.upgrade]] : [];
+  }
+  if (it.cat === "tablet" || it.cat === "watch") return [["Costco card: " + it.cat + " line activation", COSTCO.bts]];
+  if (it.cat === "internet") return [["Costco card: Home Internet activation", COSTCO.internet]];
+  return [];
+}
+// Switcher programs (MP "Switcher Programs"): up to $800 per line on a Virtual Prepaid Mastercard, max 4 lines.
+// Keep and Switch: new account, port-in, bring your own phone, no device promo on that line.
+// Family Freedom: new account, port-in, new phone on EIP, trade-in; device promos allowed.
+const SWITCHERS = [ {id:"none", name:"None"}, {id:"keep", name:"Keep and Switch"}, {id:"family", name:"Family Freedom"} ];
+function switcherCheck(it){
+  const sw = it.switcher || "none"; if (sw === "none" || it.cat !== "phone") return { ok:false, why:"" };
+  const financed = (itemDev(it).price || 0) > 0;
+  if (it.tx !== "port") return { ok:false, why:"Needs a new line with port-in." };
+  if (sw === "keep"){
+    if (financed) return { ok:false, why:"Keep and Switch is for customers keeping their own phone. Use Family Freedom for a new phone." };
+    return { ok:true, why:"" };
+  }
+  if (!financed) return { ok:false, why:"Family Freedom needs a new phone on EIP. Use Keep and Switch for their own phone." };
+  if (!it.tradeIn) return { ok:false, why:"Family Freedom needs a trade-in." };
+  return { ok:true, why:"" };
+}
+function switcherAmt(it){ if (!switcherCheck(it).ok) return 0; const v = (it.switchAmt == null || it.switchAmt === "") ? 800 : num(it.switchAmt); return Math.min(800, Math.max(0, v)); }
+
+function calcQuote(qt){
+  let monthly = 0, due = 0, gift = 0, reimb = 0, reimbLines = 0;
+  const rows = qt.items.map(it => { const c = calcItem(it, qt); monthly += c.monthly; due += c.due; gift += c.gift; if (c.reimbUnit){ reimbLines += it.qty; reimb += c.reimb; } return c; });
+  // Per-line plan shares are rounded to the cent; fix the account total so it matches the real plan price exactly.
+  const disc = find(DATA.discounts, qt.discountId);
+  DATA.plans.phone.forEach(pl => {
+    const k = linesOnPlan(qt, pl.id), n = phoneLines(qt);
+    if (!k || !pl.tiers) return;
+    const off = (disc.id !== "none" && disc.appliesTo.includes("phone") && !(disc.id === "employee" && pl.employee === false) && disc.type === "pct") ? disc.value / 100 : 0;
+    const per = r2(planTotal(pl, n) / n), perNet = per - r2(per * off);
+    const exactNet = planTotal(pl, n) * k / n * (1 - off);
+    monthly += exactNet - perNet * k;
+  });
+  gift += num(qt.costcoCredit || 0); // entered by the rep on the Review page
+  return { rows, monthly:r2(monthly), due:r2(due), gift:r2(gift), reimb:r2(reimb), reimbLines };
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const keepY = window.scrollY;
+  renderInner();
+  window.scrollTo(0, keepY);
+}
+function renderInner(){
+  const isBiz = state.tab === "business";
+  document.getElementById("tabConsumer").classList.toggle("on", !isBiz);
+  document.getElementById("tabBusiness").classList.toggle("on", isBiz);
+  document.getElementById("controls").style.display = isBiz ? "none" : "";
+  document.getElementById("totals").style.display = isBiz ? "none" : "";
+  document.getElementById("quoteSel").value = state.active;
+
+  const qt = Q();
+  const ds = document.getElementById("discSel");
+  ds.innerHTML = DATA.discounts.map(d => '<option value="' + d.id + '">' + esc(d.name) + '</option>').join("");
+  ds.value = qt.discountId;
+  document.getElementById("apChk").checked = state.autopay !== false;
+  const cb = document.getElementById("curBill");
+  if (document.activeElement !== cb) cb.value = state.currentBill;
+
+  document.getElementById("confirmBox").innerHTML = ui.confirm
+    ? '<div class="confirm"><span>Erase everything on <b>Quote ' + state.active + '</b>?</span><button class="btn danger small" data-act="confirm-yes">Yes, start over</button><button class="btn small" data-act="confirm-no">Cancel</button></div>'
+    : "";
+
+  renderTotals();
+  document.getElementById("promoDate").textContent = "Promos last updated: " + DATA.promosUpdated;
+  renderRep(isBiz);
+  const main = document.getElementById("main");
+  if (isBiz){
+    main.innerHTML = '<div class="card bizph"><b>Business quotes</b><br>Coming later. Use the Consumer tab for now.</div>';
+  } else if (state.view === "review"){
+    main.innerHTML = segHTML() + (state.reviewMode === "both" ? compareHTML() : reviewHTML(qt));
+  } else {
+    main.innerHTML = buildHTML(qt);
+  }
+  renderBottom(isBiz);
+  renderModal();
+}
+
+function renderTotals(){
+  const t = calcQuote(Q());
+  document.getElementById("totMo").textContent = fmt(t.monthly);
+  document.getElementById("totDue").textContent = fmt(t.due);
+}
+
+function chipsFor(it, c){
+  const ch = [];
+  if (it.cat === "phone"){
+    ch.push('<span class="chip">' + find(TX, it.tx || "upgrade").name + '</span>');
+    const pl = planOf(it, Q());
+    if (pl.maxLines && phoneLines(Q()) > pl.maxLines) ch.push('<span class="chip warn">' + esc(pl.name) + ' allows ' + pl.maxLines + ' lines max</span>');
+    if (pl.note) ch.push('<span class="chip">' + esc(pl.note) + '</span>');
+  }
+  const pk0 = promoPicks(it) * it.qty;
+  if (pk0) ch.push('<span class="chip">' + pk0 + ' Pick' + (pk0 > 1 ? "s" : "") + '</span>');
+  if (c.prot.price) ch.push('<span class="chip">' + esc(c.prot.name) + '</span>');
+  if (it.tradeIn && it.tradeDevId) ch.push('<span class="chip">Trade-in</span>');
+  if (c.promo.id !== "none") ch.push('<span class="chip promo">' + esc(c.promo.name) + '</span>');
+  if (it.hasDown && c.unitDue > 0) ch.push('<span class="chip">' + fmt(c.unitDue) + ' down each</span>');
+  if (it.addons.length) ch.push('<span class="chip">' + it.addons.length + ' add-on' + (it.addons.length > 1 ? "s" : "") + '</span>');
+  if (num(it.extraCredit) > 0) ch.push('<span class="chip promo">' + fmt(num(it.extraCredit)) + '/mo credit</span>');
+  return ch.length ? '<div class="chips">' + ch.join("") + '</div>' : "";
+}
+
+function picksHTML(qt){
+  const p = picksInfo(qt);
+  if (!p) return "";
+  if (p.avail == null) return '<div class="picksbar">Picks: ' + p.used + ' used. ' + esc(p.planName) + ' picks by line count not loaded yet' + (p.max ? ' (max ' + p.max + ')' : '') + '.</div>';
+  const over = p.used > p.avail;
+  const sel = qt.benefits || [];
+  let h = '<div class="picksbar' + (over ? ' over' : '') + '"><span>Picks</span><b>' + p.used + ' of ' + p.avail + ' used</b>' +
+    (over ? '<em>Over by ' + (p.used - p.avail) + '</em>' : '<em>' + (p.avail - p.used) + ' open</em>') +
+    '<button class="btn small" data-act="bens">' + (ui.bens ? "Done" : "Benefits" + (sel.length ? " (" + sel.length + ")" : "")) + '</button></div>';
+  if (ui.bens){
+    const groups = {};
+    DATA.partnerBenefits.forEach(b => { const k = b.group || (b.picks + " Pick" + (b.picks > 1 ? "s" : "")); (groups[k] = groups[k] || []).push(b); });
+    h += '<div class="card benpanel">' + Object.keys(groups).map(k => '<div class="bengroup"><div class="lbl">' + esc(k) + '</div><div class="chips">' +
+      groups[k].map(b => '<button class="benchip' + (sel.includes(b.id) ? " on" : "") + '" data-act="ben" data-id="' + b.id + '">' + esc(b.name) + (b.group ? " (" + b.picks + ")" : "") + '</button>').join("") + '</div></div>').join("") +
+      '<div class="note">Optimized Video Calls is included on Loaded. Picks for benefits come out of the same total as device promos.</div></div>';
+  } else if (sel.length){
+    h += '<div class="chips" style="margin:-2px 0 10px">' + sel.map(id => { const b = DATA.partnerBenefits.find(x => x.id === id); return b ? '<span class="chip promo">' + esc(b.name) + '</span>' : ""; }).join("") + '</div>';
+  }
+  return h;
+}
+
+function buildHTML(qt){
+  if (!qt.items.length){
+    return '<div class="empty"><b>Quote ' + state.active + ' is empty</b>Tap "Add to quote" at the bottom to add phones, tablets, watches or internet.</div>';
+  }
+  return '<h1 class="view">Quote ' + state.active + '</h1>' + picksHTML(qt) + qt.items.map((it, idx) => {
+    const c = calcItem(it, qt);
+    const plans = it.cat === "phone" ? DATA.plans.phone.filter(p => BASE_PLANS.includes(p.id)) : DATA.plans[it.cat];
+    return '<div class="card"><div class="item">' +
+      '<div class="ico">' + ICONS[it.cat] + '</div>' +
+      '<div><div class="iname">' + esc(c.devName) + '</div>' +
+        '<div class="isub">' + CATS[it.cat].label + (it.qty > 1 ? " x " + it.qty + ", same setup on each" : "") + '</div>' +
+        '<div class="irow">' +
+          '<div class="qty"><button data-act="qty-dec" data-i="' + idx + '" aria-label="Decrease">-</button><span>' + it.qty + '</span><button data-act="qty-inc" data-i="' + idx + '" aria-label="Increase">+</button></div>' +
+          '<select data-plan="' + idx + '">' + plans.map(p => '<option value="' + p.id + '"' + (p.id === (it.cat === "phone" ? baseOf(it.planId) : it.planId) ? " selected" : "") + '>' + esc(p.name) + '</option>').join("") + '</select>' +
+          '<button class="btn primary small" data-act="customize" data-i="' + idx + '">Customize</button>' +
+        '</div>' + chipsFor(it, c) +
+      '</div>' +
+      '<div class="price">' + fmt(c.monthly) + '/mo<small>' + (it.qty > 1 ? fmt(c.unit) + " each" : "") + (c.due ? " " + fmt(c.due) + " today" : "") + '</small></div>' +
+    '</div><div class="rm"><button class="btn ghost small danger" data-act="remove" data-i="' + idx + '">Remove</button></div></div>';
+  }).join("");
+}
+
+function segHTML(){
+  const m = state.reviewMode, a = state.active;
+  const on = v => (v === "A" && m === "single" && a === "A") || (v === "B" && m === "single" && a === "B") || (v === "both" && m === "both") ? " on" : "";
+  return '<div class="seg"><button class="' + on("A") + '" data-act="rview" data-v="A">Review A</button><button class="' + on("B") + '" data-act="rview" data-v="B">Review B</button><button class="' + on("both") + '" data-act="rview" data-v="both">A vs B</button></div><div class="note" id="pdfMsg" style="display:none;margin-bottom:10px;color:var(--accent)"></div>';
+}
+
+function compareHTML(){
+  const cols = ["A","B"].map(k => {
+    const qt = state.quotes[k], t = calcQuote(qt);
+    const cur = num(state.currentBill);
+    let h = '<div class="card"><h3>Quote ' + k + '</h3>';
+    if (!qt.items.length) return { k, t, html: h + '<div class="note">Empty. Build Quote ' + k + ' first.</div></div>', empty:true };
+    h += '<div class="lbl">Monthly</div><div class="big">' + fmt(t.monthly) + '</div>' +
+         '<div class="note">Due today: <b>' + fmt(t.due) + '</b></div>' +
+         (t.reimb ? '<div class="note">Switcher payoff: <b>up to ' + fmt(t.reimb) + '</b></div>' : "") +
+         '<label class="field" style="margin-top:8px">Costco credit<span class="money"><input type="text" inputmode="decimal" data-cq="' + k + '" value="' + esc(qt.costcoCredit || "") + '" placeholder="0.00"></span></label>';
+    if (cur > 0){
+      const d = r2(cur - t.monthly);
+      h += '<div class="note ' + (d >= 0 ? "good" : "warn") + '">' + (d >= 0 ? fmt(d) + " less" : fmt(-d) + " more") + ' than current ' + fmt(cur) + '</div>';
+    }
+    h += '<div style="margin-top:8px">' + qt.items.map((it, i) => {
+      const c = t.rows[i];
+      return '<div class="abrow"><span class="mini">' + ICONS[it.cat] + esc(c.devName) + (it.qty > 1 ? " x " + it.qty : "") + '</span><b>' + fmt(c.monthly) + '</b></div>';
+    }).join("") + '</div></div>';
+    return { k, t, html:h, empty:false };
+  });
+  let h = '<div class="ab">' + cols[0].html + cols[1].html + '</div>';
+  if (!cols[0].empty && !cols[1].empty){
+    const d = r2(cols[1].t.monthly - cols[0].t.monthly);
+    h += '<div class="card abdiff">' + (d === 0 ? "Both quotes cost the same per month." :
+      "Quote " + (d > 0 ? "B" : "A") + " is " + fmt(Math.abs(d)) + "/mo more than Quote " + (d > 0 ? "A" : "B") + ".") + '</div>';
+  }
+  return h;
+}
+
+// Rep-only: room under the current bill and what fits in it. Hidden unless the eye button is on, never on Review.
+function suggestions(qt, room){
+  const out = [];
+  ["watch","tablet","internet"].forEach(cat => {
+    DATA.devices[cat].forEach(dev => {
+      const it = defaultItem(cat); it.deviceId = dev.id;
+      const tmp = { ...qt, items:[...qt.items, it] };
+      const c = calcItem(it, tmp);
+      if (c.monthly <= room) out.push({ cat, dev, mo:c.monthly });
+    });
+  });
+  return out.sort((a,b) => b.mo - a.mo).slice(0, 4);
+}
+
+function renderRep(isBiz){
+  const btn = document.getElementById("repBtn"), box = document.getElementById("repBox");
+  const show = ui.rep && !isBiz && state.view === "build";
+  btn.style.display = (isBiz || state.view !== "build") ? "none" : "";
+  btn.classList.toggle("on", show);
+  if (!show){ box.innerHTML = ""; return; }
+  const qt = Q(), cur = num(state.currentBill), t = calcQuote(qt);
+  if (!(cur > 0)){ box.innerHTML = '<div class="rep">Rep view: enter the current monthly bill to see how much room is left.</div>'; return; }
+  const room = r2(cur - t.monthly);
+  let h = '<div class="rep">Rep view. Room under current bill: <span class="room">' + fmt(room) + '/mo</span>';
+  if (room > 0){
+    const s = suggestions(qt, room);
+    h += s.length
+      ? '<div class="fits">' + s.map(x => '<button class="btn small" data-act="addfit" data-cat="' + x.cat + '" data-dev="' + x.dev.id + '">+ ' + esc(x.dev.name) + ' (' + fmt(x.mo) + '/mo)</button>').join("") + '</div>'
+      : '<div class="note">Nothing in the catalog fits in this room yet.</div>';
+  } else {
+    h += '<div class="note warn">Quote is at or above the current bill.</div>';
+  }
+  box.innerHTML = h + '</div>';
+}
+
+function reviewHTML(qt){
+  const t = calcQuote(qt);
+  let h = '';
+  if (!qt.items.length) return h + '<div class="empty"><b>Nothing to review yet</b>Go back and add items to the quote.</div>';
+
+  const cur = num(state.currentBill);
+  if (cur > 0){
+    const diff = r2(cur - t.monthly);
+    const good = diff >= 0;
+    h += '<div class="card"><div class="compare">' +
+      '<div class="cbox"><span>Current bill</span><b>' + fmt(cur) + '</b></div>' +
+      '<div class="cbox"><span>New monthly</span><b>' + fmt(t.monthly) + '</b></div>' +
+      '<div class="cbox ' + (good ? "good" : "bad") + '"><span>' + (good ? "Monthly savings" : "Monthly increase") + '</span><b>' + fmt(Math.abs(diff)) + '</b></div>' +
+      '</div><div class="note" style="text-align:center">' + (good ? "That is " + fmt(Math.abs(diff) * 12) + " saved per year." : "That is " + fmt(Math.abs(diff) * 12) + " more per year.") + '</div></div>';
+  } else {
+    h += '<div class="note" style="margin-bottom:12px">Tip: enter the customer\'s current monthly bill at the top to show a side-by-side comparison here.</div>';
+  }
+
+  if ((qt.benefits || []).length){
+    h += '<div class="card"><div class="lbl" style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em">Included with your Picks</div><div class="chips">' +
+      qt.benefits.map(id => { const b = DATA.partnerBenefits.find(x => x.id === id); return b ? '<span class="chip promo">' + esc(b.name) + '</span>' : ""; }).join("") + '</div></div>';
+  }
+
+  h += qt.items.map((it, idx) => {
+    const c = t.rows[idx];
+    const open = ui.open[it.id];
+    const plan = planOf(it, qt);
+    let row = '<div class="card"><div class="item">' +
+      '<div class="ico">' + ICONS[it.cat] + '</div>' +
+      '<div><div class="iname">' + esc(c.devName) + (it.qty > 1 ? " x " + it.qty : "") + '</div>' +
+      '<div class="isub">' + esc(plan.name) + '</div>' +
+      '<div class="irow"><button class="btn small" data-act="bd" data-id="' + it.id + '">' + (open ? "Hide breakdown" : "Breakdown") + '</button></div></div>' +
+      '<div class="price">' + fmt(c.monthly) + '/mo<small>' + (c.due ? fmt(c.due) + " due today" : "") + '</small></div></div>';
+    if (open){
+      row += '<table class="bd">' + c.lines.map(l =>
+        '<tr><td>' + esc(l.label) + '</td><td class="a' + (l.amt < 0 ? " neg" : "") + '">' + fmt(l.amt) + '</td></tr>').join("") +
+        '<tr class="sum"><td>Per ' + CATS[it.cat].label.toLowerCase() + ' per month</td><td class="a">' + fmt(c.unit) + '</td></tr>' +
+        (it.qty > 1 ? '<tr class="sum"><td>x ' + it.qty + ' per month</td><td class="a">' + fmt(c.monthly) + '</td></tr>' : "") +
+        (c.due ? '<tr><td>Due today (down payment' + (it.qty > 1 ? ", " + fmt(c.unitDue) + " x " + it.qty : "") + ')</td><td class="a">' + fmt(c.due) + '</td></tr>' : "") +
+        (c.gifts.length || c.reimbUnit ? '<tr class="sum"><td colspan="2" style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em">One-time, not on the bill' + (it.qty > 1 ? " (per line)" : "") + '</td></tr>' : "") +
+        c.gifts.map(g => '<tr><td>' + esc(g[0]) + '</td><td class="a neg">' + fmt(g[1]) + '</td></tr>').join("") +
+        (c.reimbUnit ? '<tr><td>' + esc(find(SWITCHERS, it.switcher).name) + ' payoff (prepaid Mastercard, up to)</td><td class="a neg">' + fmt(c.reimbUnit) + '</td></tr>' : "") +
+        '</table>';
+    }
+    return row + '</div>';
+  }).join("");
+
+  h += '<div class="card"><div class="lbl" style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Costco credit</div>' +
+       '<label class="field">Costco Digital Shop Card they will receive (one-time, not on the bill)<span class="money"><input type="text" inputmode="decimal" id="costcoAmt" value="' + esc(qt.costcoCredit || "") + '" placeholder="0.00"></span></label></div>';
+  h += '<div class="card"><table class="bd" style="margin-top:0"><tr class="sum" style="border:0"><td style="border-top:0">Total per month</td><td class="a" style="border-top:0">' + fmt(t.monthly) + '</td></tr>' +
+       '<tr><td>Due today</td><td class="a">' + fmt(t.due) + '</td></tr>' +
+       (t.gift ? '<tr><td>Costco Digital Shop Card (after 90 days)</td><td class="a neg">' + fmt(t.gift) + '</td></tr>' : "") +
+       (t.reimb ? '<tr><td>Switcher payoff, prepaid Mastercard (up to)</td><td class="a neg">' + fmt(t.reimb) + '</td></tr>' : "") +
+       '</table>' +
+       (t.reimbLines > 4 ? '<div class="note warn">Switcher programs pay up to 4 lines per account. This quote has ' + t.reimbLines + '.</div>' : "") +
+       '<div class="note">Taxes and fees not included. Promos per the weekly overview; confirm in MP.</div></div>';
+  return h;
+}
+
+// ---------- PDF export (built in the page, no library) ----------
+const PDF_W = {
+  R:[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584],
+  B:[278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584]
+};
+const pdfTxt = s => String(s).replace(/[–—]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/×/g, "x").replace(/[^\x20-\x7e]/g, "");
+const pdfWidth = (s, size, bold) => { const w = PDF_W[bold ? "B" : "R"]; let t = 0; for (const ch of pdfTxt(s)) t += w[ch.charCodeAt(0) - 32] || 556; return t * size / 1000; };
+function pdfWrap(s, size, bold, max){
+  const words = pdfTxt(s).split(" "), out = []; let line = "";
+  words.forEach(w => { const tryL = line ? line + " " + w : w; if (pdfWidth(tryL, size, bold) > max && line){ out.push(line); line = w; } else line = tryL; });
+  if (line) out.push(line); return out;
+}
+function makePDF(draw){
+  // draw(doc) calls doc.text / doc.rect / doc.line / doc.newPage; coordinates from the top-left, in points.
+  const W = 612, H = 792, pages = [[]];
+  const cur = () => pages[pages.length - 1];
+  const col = c => c.map(v => (v / 255).toFixed(3)).join(" ");
+  const doc = {
+    W, H,
+    newPage(){ pages.push([]); },
+    text(s, x, y, o = {}){ const size = o.size || 10, bold = !!o.bold; let tx = x;
+      if (o.align === "right") tx = x - pdfWidth(s, size, bold); else if (o.align === "center") tx = x - pdfWidth(s, size, bold) / 2;
+      const esc2 = pdfTxt(s).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+      cur().push(col(o.color || [20,20,20]) + " rg BT /" + (bold ? "F2" : "F1") + " " + size + " Tf " + tx.toFixed(2) + " " + (H - y).toFixed(2) + " Td (" + esc2 + ") Tj ET"); },
+    rect(x, y, w, h, c){ cur().push(col(c) + " rg " + x.toFixed(2) + " " + (H - y - h).toFixed(2) + " " + w.toFixed(2) + " " + h.toFixed(2) + " re f"); },
+    line(x1, y, x2, c, wd = 0.6){ cur().push(col(c || [220,220,220]) + " RG " + wd + " w " + x1.toFixed(2) + " " + (H - y).toFixed(2) + " m " + x2.toFixed(2) + " " + (H - y).toFixed(2) + " l S"); }
+  };
+  draw(doc);
+  // Assemble the file.
+  const objs = [];
+  objs[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objs[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  objs[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+  const kids = [];
+  pages.forEach((ops, i) => {
+    const pid = 5 + i * 2, cid = pid + 1, stream = ops.join("\n");
+    objs[cid] = "<< /Length " + stream.length + " >>\nstream\n" + stream + "\nendstream";
+    objs[pid] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + W + " " + H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents " + cid + " 0 R >>";
+    kids.push(pid + " 0 R");
+  });
+  objs[2] = "<< /Type /Pages /Kids [" + kids.join(" ") + "] /Count " + pages.length + " >>";
+  let out = "%PDF-1.4\n"; const offs = [];
+  for (let n = 1; n < objs.length; n++){ offs[n] = out.length; out += n + " 0 obj\n" + objs[n] + "\nendobj\n"; }
+  const xref = out.length;
+  out += "xref\n0 " + objs.length + "\n0000000000 65535 f \n" + offs.slice(1).map(o => String(o).padStart(10, "0") + " 00000 n \n").join("");
+  out += "trailer\n<< /Size " + objs.length + " /Root 1 0 R >>\nstartxref\n" + xref + "\n%%EOF";
+  const bytes = new Uint8Array(out.length); for (let k = 0; k < out.length; k++) bytes[k] = out.charCodeAt(k) & 255;
+  return bytes;
+}
+function quotePDF(keys){
+  const MAG = [226,0,116], INK = [20,20,20], MUTED = [110,110,115], LINE = [225,225,228], GREEN = [0,128,60];
+  const L = 48, R = 564;
+  const today = new Date().toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric" });
+  return makePDF(doc => {
+    let y = 0;
+    const header = (first) => {
+      doc.rect(0, 0, doc.W, first ? 86 : 40, MAG);
+      if (first){ doc.text("Your T-Mobile Quote", L, 44, { size:22, bold:true, color:[255,255,255] }); doc.text("Prepared " + today, L, 66, { size:10, color:[255,235,245] }); y = 112; }
+      else { doc.text("Your T-Mobile Quote (continued)", L, 26, { size:11, bold:true, color:[255,255,255] }); y = 64; }
+    };
+    const need = h => { if (y + h > doc.H - 56){ doc.newPage(); header(false); } };
+    const row = (label, amt, o = {}) => {
+      const lines = pdfWrap(label, o.size || 10, o.bold, R - L - 110 - (o.indent || 0));
+      need(lines.length * 14 + 4);
+      lines.forEach((ln, k) => doc.text(ln, L + (o.indent || 0), y + k * 14, { size:o.size || 10, bold:o.bold, color:o.color || INK }));
+      if (amt != null) doc.text(typeof amt === "number" ? fmt(amt) : amt, R, y, { size:o.size || 10, bold:o.bold, align:"right", color:o.amtColor || (typeof amt === "number" && amt < 0 ? GREEN : (o.color || INK)) });
+      y += lines.length * 14 + (o.gap == null ? 4 : o.gap);
+    };
+    header(true);
+    const cur = num(state.currentBill);
+    keys.forEach((key, qi) => {
+      const qt = state.quotes[key], t = calcQuote(qt), disc = find(DATA.discounts, qt.discountId);
+      if (keys.length > 1){ need(60); if (qi) y += 10; doc.text("Option " + key, L, y, { size:16, bold:true, color:MAG }); y += 22; }
+      if (disc.id !== "none") row("Discount on account: " + disc.name.replace(/, \d+% off$/, "") , null, { color:MUTED, size:9 });
+      qt.items.forEach((it, idx) => {
+        const c = t.rows[idx], plan = planOf(it, qt);
+        need(70);
+        doc.line(L, y - 4, R, LINE);
+        y += 12;
+        const tx = it.cat === "phone" ? " (" + find(TX, it.tx || "upgrade").name + ")" : "";
+        row(CATS[it.cat].label + ": " + c.devName + (it.qty > 1 ? " x " + it.qty : "") + tx, c.monthly, { size:12, bold:true, gap:2 });
+        row(plan.name + (it.qty > 1 ? ", " + it.qty + " lines" : ""), null, { color:MUTED, size:9, gap:6 });
+        c.lines.forEach(l => { if (l.amt === 0 && /not available/.test(l.label)) return; row(l.label, l.amt, { indent:12, size:9.5, color:[60,60,64] }); });
+        row(it.cat === "internet" ? "Internet per month" : "Per " + CATS[it.cat].label.toLowerCase() + " per month", c.unit, { indent:12, size:9.5, bold:true });
+        if (it.qty > 1) row("x " + it.qty + " per month", c.monthly, { indent:12, size:9.5, bold:true });
+        if (c.due) row("Due today (down payment)", c.due, { indent:12, size:9.5 });
+        c.gifts.forEach(g => row(g[0] + " (one-time" + (it.qty > 1 ? ", per line" : "") + ")", g[1], { indent:12, size:9.5, amtColor:GREEN }));
+        if (c.reimbUnit) row(find(SWITCHERS, it.switcher).name + " payoff, prepaid Mastercard (one-time, up to" + (it.qty > 1 ? ", per line" : "") + ")", c.reimbUnit, { indent:12, size:9.5, amtColor:GREEN });
+        y += 6;
+      });
+      if ((qt.benefits || []).length){
+        need(40); doc.line(L, y - 4, R, LINE); y += 12;
+        row("Included with your Picks: " + qt.benefits.map(id => (DATA.partnerBenefits.find(b => b.id === id) || {}).name).filter(Boolean).join(", "), null, { size:10 });
+      }
+      const adj = r2(t.monthly - t.rows.reduce((a, r) => a + r.monthly, 0));
+      if (Math.abs(adj) >= 0.01) row("Rounding adjustment (line pricing split evenly)", adj, { size:9, color:MUTED });
+      // Totals box
+      const extras = (t.gift ? 1 : 0) + (t.reimb ? 1 : 0);
+      need((cur > 0 ? 120 : 80) + extras * 18); y += 6;
+      const boxH = (cur > 0 ? 96 : 58) + extras * 18;
+      doc.rect(L, y, R - L, boxH, [246,246,248]);
+      let by = y + 24;
+      doc.text("Total per month", L + 14, by, { size:13, bold:true }); doc.text(fmt(t.monthly), R - 14, by, { size:16, bold:true, align:"right", color:MAG }); by += 22;
+      doc.text("Due today", L + 14, by, { size:10.5 }); doc.text(fmt(t.due), R - 14, by, { size:10.5, align:"right" }); by += 20;
+      if (t.gift){ doc.text("Costco Digital Shop Card (after 90 days)", L + 14, by, { size:10.5, color:GREEN }); doc.text(fmt(t.gift), R - 14, by, { size:10.5, align:"right", color:GREEN }); by += 18; }
+      if (t.reimb){ doc.text("Old carrier payoff, prepaid Mastercard (up to)", L + 14, by, { size:10.5, color:GREEN }); doc.text(fmt(t.reimb), R - 14, by, { size:10.5, align:"right", color:GREEN }); by += 18; }
+      if (cur > 0){
+        const diff = r2(cur - t.monthly);
+        doc.text("Current monthly bill", L + 14, by, { size:10.5 }); doc.text(fmt(cur), R - 14, by, { size:10.5, align:"right" }); by += 18;
+        doc.text(diff >= 0 ? "You save per month" : "Increase per month", L + 14, by, { size:10.5, bold:true, color:diff >= 0 ? GREEN : INK });
+        doc.text(fmt(Math.abs(diff)) + " (" + fmt(Math.abs(diff) * 12) + " per year)", R - 14, by, { size:10.5, bold:true, align:"right", color:diff >= 0 ? GREEN : INK });
+      }
+      y += boxH + 14;
+    });
+    need(50);
+    pdfWrap("Estimate only. Taxes and fees are not included. Promotions require qualifying activation, plan and credit, and credits are applied over the installment term. Switcher payoffs are paid on a prepaid Mastercard after the final bill from the old carrier is submitted, up to $800 per line, max 4 lines. Pricing can change; final pricing is confirmed at checkout.", 8, false, R - L)
+      .forEach(ln => { doc.text(ln, L, y, { size:8, color:MUTED }); y += 11; });
+  });
+}
+let pdfBusy = false;
+async function savePDF(){
+  if (pdfBusy) return; pdfBusy = true;
+  const keys = state.reviewMode === "both" ? ["A","B"].filter(k => state.quotes[k].items.length) : [state.active];
+  const msg = t => { const m = document.getElementById("pdfMsg"); if (m){ m.textContent = t; m.style.display = t ? "" : "none"; } };
+  try {
+    if (!keys.length || !keys.some(k => state.quotes[k].items.length)){ msg("Add items to the quote first."); return; }
+    const d = new Date(), stamp = (d.getMonth() + 1) + "-" + d.getDate() + "-" + d.getFullYear();
+    const name = "T-Mobile Quote " + (keys.length > 1 ? "A vs B" : keys[0]) + " " + stamp + ".pdf";
+    const dl = (window.claude && window.claude.use) ? await window.claude.use("downloads") : null;
+    if (!dl){
+      // Hosted on a normal website: open the PDF in a new tab (works on iPhone/iPad) and also offer a download link.
+      const url = URL.createObjectURL(new Blob([quotePDF(keys)], { type:"application/pdf" }));
+      const a = document.createElement("a"); a.href = url; a.download = name; a.target = "_blank"; a.rel = "noopener";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      msg(""); return;
+    }
+    await dl.save({ filename:name, data:quotePDF(keys) });
+    msg("");
+  } catch(e){
+    const code = e && e.code;
+    msg(code === "declined" ? "" : code === "rate_limited" ? "A save is already open. Try again in a moment." : "Couldn't save the PDF here.");
+  } finally { pdfBusy = false; }
+}
+
+// Brief "Added" note on the menu button so the rep can see each tap worked.
+let addedFlash = null;
+function flashAdded(cat){ addedFlash = cat; clearTimeout(flashAdded.t); flashAdded.t = setTimeout(() => { addedFlash = null; renderBottom(state.tab === "business"); }, 900); }
+function renderBottom(isBiz){
+  const bi = document.getElementById("bottomInner");
+  const bb = document.getElementById("bottombar");
+  bb.style.display = isBiz ? "none" : "";
+  if (state.view === "review"){
+    bi.innerHTML = '<button class="btn" data-act="view" data-v="build">Back to quote</button><button class="btn primary" data-act="pdf">Save PDF</button>';
+  } else {
+    bi.innerHTML = '<button class="btn" data-act="add-toggle">' + (ui.dropup ? "Close" : "+ Add to quote") + '</button>' +
+                   '<button class="btn primary" data-act="view" data-v="review">Review</button>';
+  }
+  document.getElementById("dropup").innerHTML = (ui.dropup && state.view === "build" && !isBiz)
+    ? '<div class="dropup"><div class="wrap">' + Object.keys(CATS).map(k =>
+        '<button data-act="add" data-cat="' + k + '"' + (addedFlash === k ? ' style="background:var(--accent-soft);border-color:var(--accent)"' : "") + '>' + ICONS[k] + (addedFlash === k ? "Added" : CATS[k].plural) + '</button>').join("") + '</div></div>'
+    : "";
+  const du = document.querySelector(".dropup");
+  if (du) du.style.bottom = (bb.getBoundingClientRect().height + 8) + "px";
+}
+
+/* ---------- customize modal ---------- */
+function opts(list, sel, label){
+  return list.map(x => '<option value="' + x.id + '"' + (x.id === sel ? " selected" : "") + '>' + esc(label ? label(x) : x.name) + '</option>').join("");
+}
+
+function renderModal(){
+  const m = document.getElementById("modal");
+  const prevBody = m.querySelector(".sheet-body");
+  const keepScroll = prevBody ? prevBody.scrollTop : 0;
+  if (!draft){ m.innerHTML = ""; document.body.style.overflow = ""; return; }
+  document.body.style.overflow = "hidden";
+  const d = draft, cat = d.cat;
+  const plan = planOf(d, Q());
+  const dev = itemDev(d), baseDev = find(DATA.devices[cat], d.deviceId);
+  const promos = DATA.promos.filter(p => p.id === "none" || p.id === d.promoId || promoEligible(p, d));
+  const addons = DATA.addons.filter(a => a.cats.includes(cat));
+  const promo = find(DATA.promos, d.promoId);
+
+  let h = '<div class="overlay"><div class="sheet"><div class="sheet-body">' +
+    '<h2>Customize ' + CATS[cat].label.toLowerCase() + (d.qty > 1 ? " (applies to all " + d.qty + ")" : "") + '</h2>' +
+    '<div class="note">Changes save to this item when you tap Save.</div>';
+
+  if (cat === "phone"){
+    h += '<div class="sec"><h3>Transaction</h3><div class="yn">' + TX.map(t =>
+      '<button data-act="tx" data-v="' + t.id + '" class="' + ((d.tx || "upgrade") === t.id ? "on" : "") + '">' + t.name + '</button>').join("") + '</div></div>';
+  }
+  let devList = DATA.devices[cat];
+  h += '<div class="sec"><h3>Device</h3>';
+  if (cat === "phone"){
+    const sel = ui.brands || [];
+    h += '<div class="brandfilter">' + BRANDS.map(b => '<label class="check small"><input type="checkbox" data-brand="' + b.id + '"' + (sel.includes(b.id) ? " checked" : "") + '>' + b.name + '</label>').join("") + '</div>';
+    if (sel.length) devList = devList.filter(x => x.price === 0 || x.id === d.deviceId || sel.includes(brandOf(x)));
+  }
+  devList = devList.filter(x => !x.price).concat(devList.filter(x => x.price));
+  h += '<select data-m="device">' + opts(devList, d.deviceId, x => x.name) + '</select>';
+  // Devices without storage data yet show one box with the base price, so the price is always visible.
+  const stor = storageOf(baseDev).length ? storageOf(baseDev) : (baseDev.price ? [["Price", baseDev.price]] : []);
+  if (stor.length){
+    h += '<div class="stor" style="grid-template-columns:repeat(' + (stor.length === 1 ? 2 : Math.min(stor.length, 4)) + ',minmax(0,1fr))">' + stor.map(o => '<button data-act="stor" data-v="' + o[0] + '" class="' + (dev.storage === o[0] || stor.length === 1 ? "on" : "") + '"><b>' + o[0] + '</b><span>' + fmt(o[1]) + '</span></button>').join("") + '</div>';
+  }
+  h += '</div>';
+
+  h += '<div class="sec"><h3>Plan</h3><select data-m="plan">' + opts(cat === "phone" ? DATA.plans.phone.filter(p => BASE_PLANS.includes(p.id)) : DATA.plans[cat], cat === "phone" ? baseOf(d.planId) : d.planId) + '</select>';
+  h += '</div>';
+
+  if (dev.price > 0){
+    h += '<div class="sec"><h3>Installments and down payment</h3>' +
+      '<label class="field">Installment term<select data-m="months">' + DATA.installmentMonths.map(n => '<option value="' + n + '"' + (n === d.months ? " selected" : "") + '>' + n + ' months</option>').join("") + '</select></label>' +
+      '<label class="check" style="margin-top:10px"><input type="checkbox" data-m="hasDown"' + (d.hasDown ? " checked" : "") + '>Down payment</label>';
+    if (d.hasDown){
+      h += '<label class="field" style="margin-top:8px">Down payment per device<span class="money"><input type="text" inputmode="decimal" data-m="down" value="' + (d.down || "") + '" placeholder="0.00"></span></label>' +
+           '<div class="note">Lowers the monthly device payment and adds to due today.</div>';
+    }
+    h += '</div>';
+  }
+
+  if (cat === "phone"){
+    h += '<div class="sec"><h3>Is a device being traded in?</h3><div class="yn">' +
+      '<button data-act="trade" data-v="1" class="' + (d.tradeIn ? "on" : "") + '">Yes</button>' +
+      '<button data-act="trade" data-v="0" class="' + (!d.tradeIn ? "on" : "") + '">No</button></div>';
+    if (d.tradeIn){
+      h += '<label class="field" style="margin-top:10px">Which tier is the trade-in phone?<select data-m="tradeDev"><option value="">Select a tier</option>' +
+        DATA.tradeIns.map(t => '<option value="' + t.id + '"' + (t.id === d.tradeDevId ? " selected" : "") + '>' + esc(t.name) + '</option>').join("") + '</select></label>' +
+        '<label class="field" style="margin-top:8px">Condition<select data-m="tradeCond">' + opts(DATA.tradeConditions, d.tradeCond || "good") + '</select></label>';
+      if (d.tradeDevId){
+        h += promo.id !== "none" && promo.tiers
+          ? '<div class="note good">Matched promo: ' + esc(promo.name) + ', ' + fmt(Math.min(promoCredit(promo, d), dev.price)) + ' credit</div>'
+          : '<div class="note warn">No T-Mix trade-in promo for this phone and tier.</div>';
+        h += '<div class="note">Tiers are simplified. Confirm the exact tier for the trade-in phone in MP.</div>';
+      }
+    }
+    h += '</div>';
+  }
+
+  h += '<div class="sec"><h3>Promotion</h3><select data-m="promo">' + opts(promos, d.promoId, p => {
+      if (p.id === "none") return p.name;
+      const tmp = { ...d, promoId:p.id };
+      const pk = promoPicks(tmp), amt = Math.min(promoCredit(p, tmp), dev.price);
+      return p.name + (p.tiers && !(d.tradeIn && d.tradeDevId) ? " (needs trade-in)" : " - " + fmt(amt)) + (pk ? ", " + pk + " Pick" + (pk > 1 ? "s" : "") : "") +
+        (promoUpcoming(p) ? " (starts " + fmtDate(p.start) + ")" : "") + (p.end ? " (ends " + fmtDate(p.end) + ")" : "") + (p.mp ? " (check MP eligibility)" : "");
+    }) + '</select>';
+  if (promo.tiers && !(d.tradeIn && d.tradeDevId)) h += '<div class="note warn">This promo needs a trade-in.</div>';
+  if (promo.id !== "none" && dev.price === 0) h += '<div class="note warn">Promo credits only apply when a device is financed.</div>';
+  if (promoUpcoming(promo)) h += '<div class="note warn">This promo starts ' + fmtDate(promo.start) + '. Only quote it for a purchase on or after that date.</div>';
+  if (promo.mp) h += '<div class="note warn">Check MP to confirm this phone is on the eligible device list.</div>';
+  if (cat === "phone" && dev.picks != null) h += '<div class="note">t-mobile.com: On Us ' + (dev.picksNote ? dev.picksNote + " and " : "") + dev.picks + ' Pick' + (dev.picks > 1 ? "s" : "") + '.</div>';
+  h += '</div>';
+
+  if (cat === "phone" && d.tx === "port"){
+    const chk = switcherCheck(d);
+    h += '<div class="sec"><h3>Switcher program (up to $800 per line)</h3><div class="yn">' + SWITCHERS.map(x =>
+      '<button data-act="sw" data-v="' + x.id + '" class="' + ((d.switcher || "none") === x.id ? "on" : "") + '">' + x.name + '</button>').join("") + '</div>';
+    if ((d.switcher || "none") !== "none"){
+      h += '<label class="field" style="margin-top:8px">Balance owed to old carrier, per line (max $800)<span class="money"><input type="text" inputmode="decimal" data-m="swamt" value="' + (d.switchAmt == null ? "800" : d.switchAmt) + '" placeholder="800.00"></span></label>';
+      h += chk.ok ? '<div class="note good">Paid on a Virtual Prepaid Mastercard after they submit their final bill at promotions.t-mobile.com within 30 days. Not taken off the monthly bill.</div>'
+                  : '<div class="note warn">' + chk.why + '</div>';
+      if (d.switcher === "keep" && d.promoId !== "none") h += '<div class="note warn">Keep and Switch can\'t be combined with a device promo on the same line.</div>';
+    }
+    h += '</div>';
+  }
+  const cc = costcoCard(d);
+  if (cc.length) h += '<div class="sec"><h3>Costco Digital Shop Card</h3>' + cc.map(g => '<div class="note good">' + esc(g[0].replace("Costco card: ", "")) + ': ' + fmt(g[1]) + '</div>').join("") +
+    '<div class="note">Sent automatically after 90 days of service. 1 per line per year.</div></div>';
+
+  const protList = DATA.protection[cat].filter(x => x.id === "none" || x.id === d.protId || (dev.price ? !x.byo : !x.byPrice));
+  h += '<div class="sec"><h3>Protection</h3><select data-m="prot">' + opts(protList, d.protId, x => { const pr = x.byPrice ? protForDevice(dev) : x.price; return x.name + (pr ? " - " + fmt(pr) + "/mo" : ""); }) + '</select>' +
+    (cat !== "internet" && !dev.price ? '<div class="note">Bring your own: pick the tier that matches the customer\'s ' + cat + '.</div>' : "") + '</div>';
+
+  if (addons.length){
+    h += '<div class="sec"><h3>Add-ons and features</h3><div class="checks">' +
+      addons.map(a => '<label class="check"><input type="checkbox" data-m="addon" value="' + a.id + '"' + (d.addons.includes(a.id) ? " checked" : "") + '>' + esc(a.name) + ' (' + fmt(a.price) + '/mo)</label>').join("") + '</div></div>';
+  }
+
+  h += '<div class="sec"><h3>Extra monthly credit</h3><label class="field">Credit per line, per month<span class="money"><input type="text" inputmode="decimal" data-m="extra" value="' + (d.extraCredit || "") + '" placeholder="0.00"></span></label></div>';
+
+  h += '</div><div class="preview"><div class="pv" id="pv"></div><button class="btn" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">Save</button></div>';
+  h += '</div></div>';
+  m.innerHTML = h;
+  const sb = m.querySelector(".sheet-body");
+  if (sb) sb.scrollTop = keepScroll;
+  updatePreview();
+}
+
+function updatePreview(){
+  const pv = document.getElementById("pv");
+  if (!pv || !draft) return;
+  const qt = Q();
+  const tmp = { ...qt, items: qt.items.map((x, i) => i === draftIndex ? draft : x) };
+  const c = calcItem(draft, tmp);
+  pv.innerHTML = 'This item: <b>' + fmt(c.monthly) + '/mo</b>' + (draft.qty > 1 ? " (" + fmt(c.unit) + " each)" : "") + (c.due ? "<br>Due today: <b>" + fmt(c.due) + "</b>" : "");
+}
+
+function onModalField(el){
+  const d = draft, f = el.dataset.m;
+  let rerender = true;
+  if (f === "device"){ d.deviceId = el.value; d.storage = "";
+    if (d.cat !== "internet"){ const nd = find(DATA.devices[d.cat], d.deviceId), pp = find(DATA.protection[d.cat], d.protId);
+      if (nd.price && pp.byo) d.protId = "php";
+      if (!nd.price && pp.byPrice) d.protId = "none"; }
+    if (d.cat === "watch"){ if (d.deviceId === "syncupkids2") d.planId = "wkids30"; else if (d.planId === "wkids30") d.planId = "w30"; d.benefits = [...(planOf(d, Q()).benefits || [])]; } if (d.tradeIn && d.tradeDevId) d.promoId = autoPromo(d); else if (!promoEligible(find(DATA.promos, d.promoId), d)) d.promoId = "none"; }
+  else if (f === "plan"){ d.planId = el.value; d.benefits = [...(planOf(d, Q()).benefits || [])]; const rp = find(DATA.promos, d.promoId).plan; if (rp && rp !== d.planId) d.promoId = "none"; }
+  else if (f === "months"){ d.months = +el.value; rerender = false; }
+  else if (f === "hasDown"){ d.hasDown = el.checked; if (!el.checked) d.down = 0; }
+  else if (f === "down"){ d.down = num(el.value); rerender = false; }
+  else if (f === "swamt"){ d.switchAmt = el.value === "" ? "" : Math.min(800, num(el.value)); rerender = false; }
+  else if (f === "tradeDev"){ d.tradeDevId = el.value; d.promoId = d.tradeDevId ? autoPromo(d) : "none"; }
+  else if (f === "tradeCond"){ d.tradeCond = el.value; if (d.tradeDevId) d.promoId = autoPromo(d); }
+  else if (f === "promo"){ d.promoId = el.value; promoPlan(d); }
+  else if (f === "prot"){ d.protId = el.value; rerender = false; }
+  else if (f === "addon"){ d.addons = el.checked ? [...new Set([...d.addons, el.value])] : d.addons.filter(a => a !== el.value); rerender = false; }
+  else if (f === "benefit"){
+    const b = planOf(d, Q()).benefits[+el.dataset.b];
+    d.benefits = el.checked ? [...new Set([...d.benefits, b])] : d.benefits.filter(x => x !== b); rerender = false;
+  }
+  else if (f === "extra"){ d.extraCredit = num(el.value); rerender = false; }
+  if (rerender) renderModal(); else updatePreview();
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]");
+  // Tapping anywhere outside the add menu (and not on its toggle) closes it.
+  if (ui.dropup && !e.target.closest(".dropup") && !(b && b.dataset.act === "add-toggle")){
+    ui.dropup = false; renderBottom(state.tab === "business");
+    if (!b) return;
+  }
+  if (!b) return;
+  const act = b.dataset.act, qt = Q(), i = +b.dataset.i;
+  switch (act){
+    case "tab": state.tab = b.dataset.tab; ui.dropup = false; break;
+    case "startover": ui.confirm = true; break;
+    case "confirm-no": ui.confirm = false; break;
+    case "confirm-yes": state.quotes[state.active] = newQuote(); ui.confirm = false; state.view = "build"; break;
+    case "pdf": savePDF(); return;
+    case "view": state.view = b.dataset.v; ui.dropup = false; ui.rep = false; saveState(); renderInner(); window.scrollTo(0,0); return;
+    case "add-toggle": ui.dropup = !ui.dropup; break;
+    case "add": qt.items.push(defaultItem(b.dataset.cat)); flashAdded(b.dataset.cat); break; // menu stays open
+    case "qty-inc": qt.items[i].qty = Math.min(qt.items[i].qty + 1, 12); break;
+    case "qty-dec": qt.items[i].qty = Math.max(qt.items[i].qty - 1, 1); break;
+    case "remove": qt.items.splice(i, 1); break;
+    case "customize": draftIndex = i; draft = JSON.parse(JSON.stringify(qt.items[i])); break;
+    case "cancel": draft = null; draftIndex = -1; break;
+    case "save": {
+      const ps = document.querySelector('[data-m="promo"]'); if (ps && ps.value && ps.value !== draft.promoId) draft.promoId = ps.value;
+      const ds = document.querySelector('[data-m="device"]'); if (ds && ds.value && ds.value !== draft.deviceId){ draft.deviceId = ds.value; draft.storage = ""; }
+      promoPlan(draft);
+    }
+      qt.items[draftIndex] = draft; draft = null; draftIndex = -1; break;
+    case "sw":
+      draft.switcher = b.dataset.v;
+      renderModal(); return;
+    case "stor":
+      draft.storage = b.dataset.v;
+      renderModal(); return;
+    case "tx":
+      draft.tx = b.dataset.v;
+      if (draft.tradeIn && draft.tradeDevId) draft.promoId = autoPromo(draft);
+      if (!promoEligible(find(DATA.promos, draft.promoId), draft)) draft.promoId = "none";
+      promoPlan(draft);
+      renderModal(); return;
+    case "trade":
+      draft.tradeIn = b.dataset.v === "1";
+      if (!draft.tradeIn){ draft.tradeDevId = ""; if (find(DATA.promos, draft.promoId).tiers) draft.promoId = "none"; }
+      renderModal(); return;
+    case "bens": ui.bens = !ui.bens; break;
+    case "ben": { const l = qt.benefits = qt.benefits || []; const id = b.dataset.id; qt.benefits = l.includes(id) ? l.filter(x => x !== id) : l.concat(id); break; }
+    case "bd": ui.open[b.dataset.id] = !ui.open[b.dataset.id]; break;
+    case "rep": ui.rep = !ui.rep; renderRep(state.tab === "business"); return;
+    case "addfit": { const it = defaultItem(b.dataset.cat); it.deviceId = b.dataset.dev; qt.items.push(it); break; }
+    case "rview":
+      if (b.dataset.v === "both") state.reviewMode = "both";
+      else { state.reviewMode = "single"; state.active = b.dataset.v; ui.confirm = false; }
+      break;
+    default: return;
+  }
+  saveState(); render();
+});
+
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.id === "quoteSel"){ state.active = el.value; ui.confirm = false; saveState(); render(); return; }
+  if (el.id === "apChk"){ state.autopay = el.checked; saveState(); render(); return; }
+  if (el.id === "costcoAmt"){ Q().costcoCredit = el.value; saveState(); render(); return; }
+  if (el.dataset && el.dataset.cq){ state.quotes[el.dataset.cq].costcoCredit = el.value; saveState(); render(); return; }
+  if (el.id === "discSel"){ const q = Q(); q.discountId = el.value; q.items.forEach(i => { if (i.cat === "phone"){ i.planId = baseOf(i.planId); i.benefits = [...(planOf(i, q).benefits || [])]; } }); saveState(); render(); return; }
+  if (el.dataset.plan !== undefined){
+    const it = Q().items[+el.dataset.plan];
+    it.planId = el.value; it.benefits = [...(planOf(it, Q()).benefits || [])];
+    saveState(); render(); return;
+  }
+  if (el.dataset.brand && draft){
+    const b = el.dataset.brand, cur = ui.brands || [];
+    ui.brands = el.checked ? cur.concat(b) : cur.filter(x => x !== b);
+    renderModal(); return;
+  }
+  if (el.dataset.m && draft && el.dataset.m !== "down" && el.dataset.m !== "extra") onModalField(el);
+});
+
+document.addEventListener("input", e => {
+  const el = e.target;
+  if (el.id === "costcoAmt"){ Q().costcoCredit = el.value; saveState(); return; }
+  if (el.dataset && el.dataset.cq){ state.quotes[el.dataset.cq].costcoCredit = el.value; saveState(); return; }
+  if (el.id === "curBill"){ state.currentBill = el.value; saveState(); renderRep(state.tab === "business"); if (state.view === "review") document.getElementById("main").innerHTML = segHTML() + (state.reviewMode === "both" ? compareHTML() : reviewHTML(Q())); return; }
+  if (draft && (el.dataset.m === "down" || el.dataset.m === "extra")) onModalField(el);
+  // Some mobile browsers report dropdown picks as "input" before "change"; keep the draft in sync either way.
+  if (draft && el.tagName === "SELECT" && el.dataset.m) onModalField(el);
+});
+
+try { render(); } catch(e){ showCrash((e && e.stack) || e); }
+</script>
+</body>
+</html>
