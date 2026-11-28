@@ -323,10 +323,10 @@ const DATA = {
     internet: [
       // REAL prices from Magenta Pulse (T-Mix combinable internet plans), Nov 17, 2026. price = with AutoPay, noAp = without.
       // voiceBundle = $ off when the account has a qualifying voice line (Internet Voice Bundle Discount).
-      { id:"hi_amp", name:"Home Internet Amplified", price:60, noAp:70, voiceBundle:15,
-        benefits:["Unlimited data, no speed caps","5G Gateway (G5AR or G5SE)","5-Year Price Guarantee","170-498 Mbps down / 12-55 up"] },
       { id:"hi_allin", name:"All-in Home Internet", price:70, noAp:80, voiceBundle:15,
         benefits:["Unlimited Premium Data, no speed caps","5G Gateway Gen5","24/7 Personal TechPro by Assurant","Advanced Cyber Security","10-Year Price Guarantee","170-498 Mbps down / 12-55 up"] },
+      { id:"hi_amp", name:"Home Internet Amplified", price:60, noAp:70, voiceBundle:15,
+        benefits:["Unlimited data, no speed caps","5G Gateway (G5AR or G5SE)","5-Year Price Guarantee","170-498 Mbps down / 12-55 up"] },
       { id:"hi_rely", name:"Home Internet Rely", price:50, noAp:60, voiceBundle:15, note:"Included features not confirmed yet.", benefits:["Home Internet (details to confirm)", "$15 Internet Voice Bundle Discount with a voice line"] },
       { id:"away200", name:"Home Internet AWAY 200GB (hotspot)", price:110, noAp:120,
         benefits:["200GB of data","5G Gateway (per POS)","5-Year Price Guarantee","New activations only","77-292 Mbps down / 18-31 up"] },
@@ -535,6 +535,8 @@ const DATA = {
     { id:"p_4", name:"Select Devices 4 Picks On Us (no trade)", credit:1100, picks:4, tx:["port","new","upgrade"], cats:["phone"], devices:[] },
     { id:"p_3", name:"Select Devices 3 Picks On Us (no trade)", credit:700, picks:3, tx:["port","new","upgrade"], cats:["phone"], devices:[] },
     // Tablet and watch promos from the Nov 10 overview ("Beyond the smartphone"); confirm they apply on T-Mix in MP.
+    // BOGOHO: half off the tablet or watch plan, only when the plan is $10 or more (per Gio, Nov 25). No device credit.
+    { id:"bogoho", name:"BOGOHO, 50% off the plan ($10+ plan)", credit:0, planPct:50, cats:["tablet","watch"], devices:[] },
     { id:"tb_a11", name:"Galaxy Tab A11+ On Us (new line, Tablet Unlimited)", credit:339.99, plan:"tabunl", cats:["tablet"], devices:["taba11p"] },
     { id:"tb_ipad199", name:"iPad (A16) for $199 (new line, Tablet Unlimited Plus)", credit:400.99, plan:"tabplus", end:"2026-11-18", cats:["tablet"], devices:["ipada16"] },
     { id:"tb_revvl", name:"REVVL Tab 2 On Us (new line, $15+ plan)", credit:169.99, cats:["tablet"], devices:["revvltab2"] },
@@ -585,6 +587,16 @@ if (state.autopay === undefined) state.autopay = true;
 ["A","B"].forEach(k => (state.quotes[k].items || []).forEach(i => { if (i.cat === "phone") i.planId = baseOf(i.planId); }));
 let draft = null, draftIndex = -1;
 
+// Rep shown on the PDF. Saved separately on each device so Start Over doesn't clear it; coworkers can put their own.
+const REP_KEY = "kioskQuoteBuilder.rep";
+let REP = { name:"Giovanni De La Hoz", email:"Giovanni.delahoz1@t-mobile.com" };
+try { const r = JSON.parse(localStorage.getItem(REP_KEY)); if (r && typeof r.name === "string") REP = { name:r.name, email:r.email || "" }; } catch(e){}
+function saveRep(){ try { localStorage.setItem(REP_KEY, JSON.stringify(REP)); } catch(e){} }
+function repCardHTML(){
+  return '<div class="card"><div class="lbl" style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Prepared by (shows on the PDF)</div>' +
+    '<label class="field">Name<input type="text" id="repName" value="' + esc(REP.name) + '" placeholder="Your name" autocomplete="name"></label>' +
+    '<label class="field" style="margin-top:8px">Email<input type="text" inputmode="email" id="repEmail" value="' + esc(REP.email) + '" placeholder="you@t-mobile.com" autocomplete="email"></label></div>';
+}
 function loadState(){
   try { const s = JSON.parse(localStorage.getItem(STORE_KEY)); if(s && s.quotes && s.quotes.A && s.quotes.B){ [s.quotes.A, s.quotes.B].forEach(q => (q.items || []).forEach(i => i.addons = [])); return s; } } catch(e){}
   return null;
@@ -794,6 +806,11 @@ function calcItem(it, qt){
     if (it.promoId && it.promoId !== "none") L.push({ label:"Loaded savings: not available with a promo on this line", amt:0 });
     else { const sv = r2(Math.max(0, pp - vb - 5)); if (sv > 0) L.push({ label:"Loaded savings, plan to $5 (with Loaded, no promo)", amt:-sv }); }
   }
+  if (promo.planPct){
+    const net = r2(pp - vb);
+    if (net >= 10) L.push({ label:"BOGOHO: " + promo.planPct + "% off the plan", amt:-r2(net * promo.planPct / 100) });
+    else L.push({ label:"BOGOHO: plan must be $10 or more", amt:0 });
+  }
   const ec = num(it.extraCredit);
   if (ec > 0) L.push({ label:"Extra credit", amt:-ec });
 
@@ -889,7 +906,7 @@ function renderInner(){
   if (isBiz){
     main.innerHTML = '<div class="card bizph"><b>Business quotes</b><br>Coming later. Use the Consumer tab for now.</div>';
   } else if (state.view === "review"){
-    main.innerHTML = segHTML() + (state.reviewMode === "both" ? compareHTML() : reviewHTML(qt));
+    main.innerHTML = segHTML() + (state.reviewMode === "both" ? compareHTML() : reviewHTML(qt)) + repCardHTML();
   } else {
     main.innerHTML = buildHTML(qt);
   }
@@ -1119,6 +1136,12 @@ function makePDF(draw){
       const esc2 = pdfTxt(s).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
       cur().push(col(o.color || [20,20,20]) + " rg BT /" + (bold ? "F2" : "F1") + " " + size + " Tf " + tx.toFixed(2) + " " + (H - y).toFixed(2) + " Td (" + esc2 + ") Tj ET"); },
     rect(x, y, w, h, c){ cur().push(col(c) + " rg " + x.toFixed(2) + " " + (H - y - h).toFixed(2) + " " + w.toFixed(2) + " " + h.toFixed(2) + " re f"); },
+    // Polygon/polyline in top-left coordinates. o.fill = color fills; o.stroke = color strokes (o.w width, o.close closes).
+    poly(pts, o = {}){
+      const P = pts.map((q, k) => q[0].toFixed(2) + " " + (H - q[1]).toFixed(2) + (k ? " l" : " m")).join(" ");
+      if (o.fill) cur().push(col(o.fill) + " rg " + P + " h f");
+      else cur().push(col(o.stroke || [0,0,0]) + " RG " + (o.w || 1) + " w 1 J 1 j " + P + (o.close ? " h" : "") + " S");
+    },
     line(x1, y, x2, c, wd = 0.6){ cur().push(col(c || [220,220,220]) + " RG " + wd + " w " + x1.toFixed(2) + " " + (H - y).toFixed(2) + " m " + x2.toFixed(2) + " " + (H - y).toFixed(2) + " l S"); }
   };
   draw(doc);
@@ -1151,7 +1174,13 @@ function quotePDF(keys){
     let y = 0;
     const header = (first) => {
       doc.rect(0, 0, doc.W, first ? 86 : 40, MAG);
-      if (first){ doc.text("Your T-Mobile Quote", L, 44, { size:22, bold:true, color:[255,255,255] }); doc.text("Prepared " + today, L, 66, { size:10, color:[255,235,245] }); y = 112; }
+      if (first){
+        doc.text("Your T-Mobile Quote", L, 44, { size:22, bold:true, color:[255,255,255] });
+        doc.text("Prepared " + today, L, 66, { size:10, color:[255,235,245] });
+        if (REP.name) doc.text("Prepared by " + REP.name, R, 44, { size:10.5, bold:true, align:"right", color:[255,255,255] });
+        if (REP.email) doc.text(REP.email, R, 60, { size:10, align:"right", color:[255,235,245] });
+        y = 112;
+      }
       else { doc.text("Your T-Mobile Quote (continued)", L, 26, { size:11, bold:true, color:[255,255,255] }); y = 64; }
     };
     const need = h => { if (y + h > doc.H - 56){ doc.newPage(); header(false); } };
@@ -1209,9 +1238,96 @@ function quotePDF(keys){
       y += boxH + 14;
     });
     need(50);
+    if (REP.name || REP.email){ need(30); doc.text("Questions? Contact " + [REP.name, REP.email].filter(Boolean).join(", "), L, y, { size:10, bold:true, color:INK }); y += 18; }
     pdfWrap("Estimate only. Taxes and fees are not included. Promotions require qualifying activation, plan and credit, and credits are applied over the installment term. Switcher payoffs are paid on a prepaid Mastercard after the final bill from the old carrier is submitted, up to $800 per line, max 4 lines. Pricing can change; final pricing is confirmed at checkout.", 8, false, R - L)
       .forEach(ln => { doc.text(ln, L, y, { size:8, color:MUTED }); y += 11; });
+    featuresPage(doc, keys);
   });
+}
+// ---------- PDF page 2: what's included, with simple drawn icons ----------
+function arcPts(cx, cy, r, a0, a1, n = 18){ const pts = []; for (let k = 0; k <= n; k++){ const a = (a0 + (a1 - a0) * k / n) * Math.PI / 180; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return pts; }
+function iconKind(t){
+  t = t.toLowerCase();
+  if (/hotspot/.test(t)) return "wifi";
+  if (/talk|text|messag/.test(t)) return "chat";
+  if (/video|uhd|1080|720|480|stream/.test(t)) return "play";
+  if (/international|roaming|canada|mexico/.test(t)) return "globe";
+  if (/scam|cyber|security/.test(t)) return "shield";
+  if (/pick|techpro|benefit/.test(t)) return "star";
+  if (/eip|device/.test(t)) return "phone";
+  if (/guarantee/.test(t)) return "lock";
+  if (/mbps/.test(t)) return "gauge";
+  if (/gateway|router/.test(t)) return "router";
+  if (/data|5g|lte/.test(t)) return "bars";
+  return "check";
+}
+function drawIcon(doc, kind, cx, cy, color){
+  const W = [255,255,255];
+  doc.poly(arcPts(cx, cy, 10, 0, 360, 28), { fill:color });
+  const st = (pts, w = 1.4, close) => doc.poly(pts, { stroke:W, w, close });
+  switch (kind){
+    case "chat": doc.poly([[cx-5.5,cy-4.5],[cx+5.5,cy-4.5],[cx+5.5,cy+2],[cx-1,cy+2],[cx-4,cy+5],[cx-3.5,cy+2],[cx-5.5,cy+2]], { fill:W }); break;
+    case "bars": [[-4.5,3],[-1,6],[2.5,9]].forEach(b => doc.poly([[cx+b[0],cy+4.5],[cx+b[0]+2.4,cy+4.5],[cx+b[0]+2.4,cy+4.5-b[1]],[cx+b[0],cy+4.5-b[1]]], { fill:W })); break;
+    case "wifi": [2.6,5.2,7.8].forEach(r => st(arcPts(cx, cy+4, r, 225, 315, 10), 1.3)); doc.poly(arcPts(cx, cy+4, 1, 0, 360, 10), { fill:W }); break;
+    case "play": doc.poly([[cx-3,cy-5],[cx+5,cy],[cx-3,cy+5]], { fill:W }); break;
+    case "globe": st(arcPts(cx, cy, 5.6, 0, 360, 24), 1.1, true); st([[cx-5.6,cy],[cx+5.6,cy]], 0.9);
+      st(arcPts(cx, cy, 5.6, 0, 360, 24).map(q => [cx + (q[0]-cx)*0.45, q[1]]), 0.9, true); break;
+    case "shield": doc.poly([[cx-5,cy-5.5],[cx+5,cy-5.5],[cx+5,cy],[cx,cy+6],[cx-5,cy]], { fill:W }); break;
+    case "phone": st([[cx-3.5,cy-6],[cx+3.5,cy-6],[cx+3.5,cy+6],[cx-3.5,cy+6]], 1.2, true); st([[cx-1,cy+4],[cx+1,cy+4]], 1.2); break;
+    case "lock": doc.poly([[cx-4.5,cy-0.5],[cx+4.5,cy-0.5],[cx+4.5,cy+5.5],[cx-4.5,cy+5.5]], { fill:W }); st(arcPts(cx, cy-0.5, 3, 180, 360, 10), 1.4); break;
+    case "gauge": st(arcPts(cx, cy+3, 6, 180, 360, 16), 1.4); st([[cx,cy+3],[cx+3.5,cy-2]], 1.4); break;
+    case "router": doc.poly([[cx-6,cy+1],[cx+6,cy+1],[cx+6,cy+5],[cx-6,cy+5]], { fill:W }); st([[cx-3.5,cy+1],[cx-4.5,cy-5]], 1.2); st([[cx+3.5,cy+1],[cx+4.5,cy-5]], 1.2); break;
+    case "star": { const pts = []; for (let k = 0; k < 10; k++){ const r = k % 2 ? 2.6 : 6, a = (-90 + k * 36) * Math.PI / 180; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } doc.poly(pts, { fill:W }); break; }
+    default: st([[cx-4.5,cy],[cx-1.2,cy+3.5],[cx+5,cy-3.5]], 1.8);
+  }
+}
+// Customer-facing feature list for a plan (drops rep-only notes).
+function customerBenefits(plan){
+  return (plan.benefits || []).filter(b => !/to confirm|placeholder|new activations only/i.test(b)).map(b => b.replace(/\s*\(per POS\)/i, ""));
+}
+function featuresPage(doc, keys){
+  const MAG = [226,0,116], INK = [20,20,20], MUTED = [110,110,115], L = 48, R = 564;
+  // Collect each plan once across the quote(s), in item order.
+  const groups = [], seen = {};
+  keys.forEach(key => {
+    const qt = state.quotes[key];
+    qt.items.forEach(it => {
+      const plan = planOf(it, qt), id = it.cat + ":" + plan.id;
+      if (!seen[id]){ seen[id] = { cat:it.cat, plan, lines:0 }; groups.push(seen[id]); }
+      seen[id].lines += it.qty;
+    });
+  });
+  if (!groups.length) return;
+  doc.newPage();
+  doc.rect(0, 0, doc.W, 70, MAG);
+  doc.text("What's included", L, 38, { size:20, bold:true, color:[255,255,255] });
+  doc.text("Features that come with your service", L, 56, { size:10, color:[255,235,245] });
+  if (REP.name) doc.text(REP.name, R, 38, { size:10, bold:true, align:"right", color:[255,255,255] });
+  let y = 96;
+  const colW = (R - L - 16) / 2;
+  const catLabel = { phone:"Phone plan", watch:"Watch plan", tablet:"Tablet plan", internet:"Home Internet" };
+  groups.forEach(g => {
+    const feats = customerBenefits(g.plan);
+    const pi = g.cat === "phone" ? picksInfo(state.quotes[keys[0]]) : null;
+    if (pi && pi.avail && g.plan.picks) feats.push(pi.avail + " Picks for partner benefits and device deals");
+    if (!feats.length) return;
+    // Measure: each feature row is 28pt tall, two columns.
+    const rows = Math.ceil(feats.length / 2), h = 40 + rows * 30;
+    if (y + h > doc.H - 50){ doc.newPage(); y = 50; }
+    doc.rect(L, y, R - L, h, [247,247,249]);
+    doc.rect(L, y, 4, h, MAG);
+    doc.text(catLabel[g.cat] || "Plan", L + 16, y + 18, { size:8.5, bold:true, color:MAG });
+    doc.text(g.plan.name + (g.lines > 1 ? "  (" + g.lines + " lines)" : ""), L + 16, y + 32, { size:12.5, bold:true, color:INK });
+    feats.forEach((f, k) => {
+      const col = k % 2, row = Math.floor(k / 2);
+      const x = L + 16 + col * (colW + 8), iy = y + 54 + row * 30;
+      drawIcon(doc, iconKind(f), x + 10, iy, MAG);
+      const lines = pdfWrap(f, 9.5, false, colW - 36);
+      lines.slice(0, 2).forEach((ln, j) => doc.text(ln, x + 26, iy + 3.5 - (lines.length > 1 ? 5 : 0) + j * 11, { size:9.5, color:INK }));
+    });
+    y += h + 14;
+  });
+  if (y + 30 < doc.H - 30) doc.text("Plan features can change. Some features need to be turned on in your account.", L, doc.H - 36, { size:8, color:MUTED });
 }
 let pdfBusy = false;
 async function savePDF(){
@@ -1247,7 +1363,7 @@ function renderBottom(isBiz){
   const bb = document.getElementById("bottombar");
   bb.style.display = isBiz ? "none" : "";
   if (state.view === "review"){
-    bi.innerHTML = '<button class="btn" data-act="view" data-v="build">Back to quote</button><button class="btn primary" data-act="pdf">Save PDF</button>';
+    bi.innerHTML = '<button class="btn primary" data-act="pdf">Save PDF</button><button class="btn" data-act="view" data-v="build">Back to quote</button>';
   } else {
     bi.innerHTML = '<button class="btn" data-act="add-toggle">' + (ui.dropup ? "Close" : "+ Add to quote") + '</button>' +
                    '<button class="btn primary" data-act="view" data-v="review">Review</button>';
@@ -1502,7 +1618,9 @@ document.addEventListener("input", e => {
   const el = e.target;
   if (el.id === "costcoAmt"){ Q().costcoCredit = el.value; saveState(); return; }
   if (el.dataset && el.dataset.cq){ state.quotes[el.dataset.cq].costcoCredit = el.value; saveState(); return; }
-  if (el.id === "curBill"){ state.currentBill = el.value; saveState(); renderRep(state.tab === "business"); if (state.view === "review") document.getElementById("main").innerHTML = segHTML() + (state.reviewMode === "both" ? compareHTML() : reviewHTML(Q())); return; }
+  if (el.id === "repName"){ REP.name = el.value; saveRep(); return; }
+  if (el.id === "repEmail"){ REP.email = el.value.trim(); saveRep(); return; }
+  if (el.id === "curBill"){ state.currentBill = el.value; saveState(); renderRep(state.tab === "business"); if (state.view === "review") document.getElementById("main").innerHTML = segHTML() + (state.reviewMode === "both" ? compareHTML() : reviewHTML(Q())) + repCardHTML(); return; }
   if (draft && (el.dataset.m === "down" || el.dataset.m === "extra")) onModalField(el);
   // Some mobile browsers report dropdown picks as "input" before "change"; keep the draft in sync either way.
   if (draft && el.tagName === "SELECT" && el.dataset.m) onModalField(el);
